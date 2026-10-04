@@ -1,0 +1,977 @@
+/* ==========================================================================
+   Meal Planner — mobile-first styles.
+
+   Palette: a neutral zinc scale carrying the interface, with a single indigo
+   accent for anything interactive and near-black for primary actions. The
+   eight --series-* slots identify recipes; their values are validated for
+   colour-vision deficiency against each mode's surface, so light and dark are
+   separately chosen rather than one flipped into the other.
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
+
+  --bg: #fafafa;
+  --surface: #ffffff;
+  --surface-2: #f4f4f5;
+  --surface-3: #e9e9ec;
+  --border: #e4e4e7;
+  --border-strong: #d4d4d8;
+
+  --text: #18181b;
+  --text-2: #3f3f46;
+  --muted: #71717a;
+  --faint: #a1a1aa;
+
+  --accent: #4f46e5;
+  --accent-text: #ffffff;
+  --accent-soft: #eef2ff;
+  --accent-border: #c7d2fe;
+
+  --ink: #18181b;          /* primary buttons */
+  --ink-text: #ffffff;
+
+  --danger: #b91c1c;
+  --danger-soft: #fef2f2;
+
+  --done: #a1a1aa;
+
+  /* Recipe identity colours — light mode. Validated as a set against #ffffff:
+     lightness band, chroma floor, adjacent CVD separation and normal-vision
+     separation all pass. Three sit under 3:1 contrast, which is why every
+     chip also carries its number. */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-7: #4a3aa7;
+  --series-8: #e34948;
+
+  --radius: 12px;
+  --radius-lg: 16px;
+  --shadow: 0 1px 2px rgba(24, 24, 27, 0.05);
+  --shadow-lift: 0 1px 3px rgba(24, 24, 27, 0.08), 0 8px 24px rgba(24, 24, 27, 0.05);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+
+    --bg: #09090b;
+    --surface: #18181b;
+    --surface-2: #27272a;
+    --surface-3: #3f3f46;
+    --border: #27272a;
+    --border-strong: #3f3f46;
+
+    --text: #fafafa;
+    --text-2: #d4d4d8;
+    --muted: #a1a1aa;
+    --faint: #71717a;
+
+    --accent: #818cf8;
+    --accent-text: #0b0b12;
+    --accent-soft: #1e1b3a;
+    --accent-border: #3730a3;
+
+    --ink: #fafafa;
+    --ink-text: #18181b;
+
+    --danger: #f87171;
+    --danger-soft: #2a1414;
+
+    --done: #71717a;
+
+    /* Same eight hues, re-stepped for the dark surface and validated against
+       it — not an automatic flip of the light values. */
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #008300;
+    --series-7: #9085e9;
+    --series-8: #e66767;
+
+    --shadow: none;
+    --shadow-lift: none;
+  }
+}
+
+* { box-sizing: border-box; }
+
+/*
+ * The HTML `hidden` attribute must always win. Without this, any element
+ * given a `display` value by a class (.modal is display:flex) stays laid out
+ * while hidden — an invisible overlay that eats every tap.
+ */
+[hidden] { display: none !important; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+        'Helvetica Neue', Arial, sans-serif;
+  padding-bottom: calc(2rem + var(--safe-bottom));
+  overscroll-behavior-y: contain;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ----------------------------------------------------------------- header */
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: calc(env(safe-area-inset-top, 0px) + 0.85rem) 1rem 0.75rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+}
+
+.icon-btn {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+/* ------------------------------------------------------------------- tabs */
+
+.tabs {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0.85rem 0.4rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 600;
+  font-family: inherit;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tab.is-active {
+  color: var(--text);
+  border-bottom-color: var(--ink);
+}
+
+main { padding: 0.9rem 0.85rem 1rem; max-width: 760px; margin: 0 auto; }
+
+.panel { display: none; }
+.panel.is-active { display: block; }
+
+/* ------------------------------------------------------------------ cards */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+  margin-bottom: 0.8rem;
+  box-shadow: var(--shadow);
+}
+
+.card > summary,
+.subcard > summary {
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.98rem;
+  font-weight: 650;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  /* Comfortable tap target for folding a section away one-handed. */
+  min-height: 30px;
+}
+
+.card > summary::-webkit-details-marker,
+.subcard > summary::-webkit-details-marker { display: none; }
+
+.card > summary::after,
+.subcard > summary::after {
+  content: '+';
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 1.2rem;
+  font-weight: 400;
+  line-height: 1;
+}
+
+/* Scoped to the section cards. Left unscoped, this painted a stray minus
+   sign inside every open recipe, which has its own summary layout. */
+.card[open] > summary::after,
+.subcard[open] > summary::after { content: '\2212'; }
+
+/* The label may shrink and ellipsis before the summary ever wraps to a
+   second line — a wrapped heading next to a truncated value reads as broken. */
+.sum-label {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sum-meta {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A section nested inside a card. */
+.subcard {
+  margin-top: 0.9rem;
+  padding: 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.subcard > summary { font-size: 0.92rem; }
+
+.card-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.98rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.empty { text-align: center; padding: 1.4rem 1rem; }
+.empty p { margin: 0.35rem 0; }
+
+/* ------------------------------------------------------------------ forms */
+
+label {
+  display: block;
+  margin: 0.9rem 0 0.35rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.hint-inline { font-weight: 400; color: var(--muted); }
+
+input[type='text'],
+input[type='url'],
+input[type='search'],
+input[type='number'],
+textarea,
+select {
+  width: 100%;
+  padding: 0.72rem 0.8rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  /* 16px minimum stops iOS Safari zooming in on focus. */
+  font-size: 16px;
+  font-family: inherit;
+}
+
+textarea { resize: vertical; line-height: 1.5; }
+
+input::placeholder, textarea::placeholder { color: var(--faint); }
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.check-inline {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-weight: 400;
+  font-size: 0.9rem;
+  color: var(--text-2);
+}
+
+.check-inline input { width: 1.15rem; height: 1.15rem; margin-top: 0.18rem; flex: none; }
+
+.hint { color: var(--muted); font-size: 0.83rem; margin: 0.45rem 0 0; line-height: 1.45; }
+
+/* ---------------------------------------------------------------- buttons */
+
+.btn {
+  display: block;
+  width: 100%;
+  margin-top: 0.65rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.93rem;
+  font-weight: 600;
+  font-family: inherit;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  min-height: 46px;
+}
+
+.btn:active { transform: translateY(1px); }
+
+.btn-primary {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--ink-text);
+}
+
+.btn-accent {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.btn-ghost { background: transparent; }
+
+.btn-danger-ghost {
+  background: transparent;
+  color: var(--danger);
+  border-color: var(--border-strong);
+}
+
+.btn-small {
+  width: auto;
+  padding: 0.35rem 0.7rem;
+  min-height: 34px;
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+.row { display: flex; gap: 0.55rem; }
+.row .btn { flex: 1 1 0; }
+
+.stepper { display: flex; align-items: stretch; gap: 0.5rem; }
+.stepper input { text-align: center; font-weight: 700; font-size: 1.1rem; }
+.btn-step {
+  width: 3rem;
+  flex: none;
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: 0;
+  background: var(--surface-2);
+}
+
+/* ------------------------------------------------------- segmented switch */
+
+.segmented {
+  display: flex;
+  gap: 0.25rem;
+  margin: 0.9rem 0 0.3rem;
+  padding: 0.25rem;
+  background: var(--surface-2);
+  border-radius: 10px;
+}
+
+.seg {
+  flex: 1 1 0;
+  padding: 0.55rem 0.35rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.seg.is-active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+}
+
+.src-pane { display: none; }
+.src-pane.is-active { display: block; }
+
+/* ------------------------------------------------------------ category bar */
+
+.catbar {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding: 0.15rem 0.85rem 0.7rem;
+  margin: 0 -0.85rem;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.catbar::-webkit-scrollbar { display: none; }
+
+.cat {
+  flex: none;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  min-height: 38px;
+}
+
+.cat.is-on {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--ink-text);
+}
+
+.cat .cat-count { opacity: 0.6; font-weight: 500; margin-left: 0.2rem; }
+
+/* ------------------------------------------- planner: chosen meals list */
+
+.sel-list { margin-top: 0.3rem; }
+
+.sel-row {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.sel-row:last-child { border-bottom: 0; }
+
+.sel-main { flex: 1 1 auto; min-width: 0; }
+
+.sel-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.3;
+  display: block;
+}
+
+.sel-meta {
+  display: block;
+  font-size: 0.79rem;
+  color: var(--muted);
+  margin-top: 0.12rem;
+}
+
+.sel-remove {
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  margin: 0;
+  min-height: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 1.05rem;
+  line-height: 1;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* ------------------------------------------- planner: the recipe picker */
+
+.pick-list {
+  margin-top: 0.6rem;
+  /* Capped so 60 recipes don't push the rest of the page out of reach. */
+  max-height: 55vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  border-top: 1px solid var(--border);
+}
+
+.pick-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.7rem 0.15rem;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  color: var(--text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  min-height: 52px;
+}
+
+.pick-mark {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--ink-text);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.pick-row.is-on .pick-mark {
+  border-color: transparent;
+  background: var(--tag-color, var(--accent));
+  color: #fff;
+}
+
+.pick-main { flex: 1 1 auto; min-width: 0; }
+
+.pick-title { display: block; font-size: 0.92rem; line-height: 1.3; }
+.pick-row.is-on .pick-title { font-weight: 650; }
+
+.pick-meta {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 0.1rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pick-empty { padding: 0.9rem 0.2rem; color: var(--muted); font-size: 0.88rem; }
+
+/* ------------------------------------------------------------------ chips */
+
+.chips { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-top: 0.6rem; }
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.87rem;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  min-height: 42px;
+}
+
+.chip.is-on {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  font-weight: 600;
+}
+
+.pill {
+  display: inline-block;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+/* ------------------------------------------- recipe identity chips & dots */
+
+/* A numbered colour chip. The number is what identifies the recipe; the
+   colour is a visual shortcut. Never colour alone. */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 100%;
+  padding: 0.12rem 0.6rem 0.12rem 0.2rem;
+  margin: 0 0.3rem 0.25rem 0;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-2);
+  vertical-align: middle;
+}
+
+.tag-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: none;
+  border-radius: 50%;
+  background: var(--tag-color, var(--muted));
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.tag-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The compact form used on each grocery line. */
+.src-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-left: 0.25rem;
+  border-radius: 50%;
+  background: var(--tag-color, var(--muted));
+  color: #fff;
+  font-size: 0.67rem;
+  font-weight: 700;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.src-num-extra {
+  background: transparent;
+  border: 1.5px dashed var(--faint);
+  color: var(--muted);
+}
+
+.legend { display: flex; flex-wrap: wrap; margin-top: 0.6rem; }
+
+/* -------------------------------------------------------- grocery list */
+
+.aisle-group { margin-bottom: 1.3rem; }
+
+.aisle {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  margin: 0 0 0.2rem;
+  padding: 0.3rem 0.1rem 0.5rem;
+  border-bottom: 1px solid var(--border-strong);
+  cursor: pointer;
+  list-style: none;
+}
+
+.aisle::-webkit-details-marker { display: none; }
+
+/* Chevron rotates when the aisle is open, so a folded aisle is obvious. */
+.aisle::after {
+  content: '';
+  margin-left: auto;
+  align-self: center;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+}
+
+.aisle-group[open] > .aisle::after { transform: rotate(45deg); }
+
+.aisle-group[open] > .aisle { border-bottom-color: var(--border-strong); }
+
+.aisle-name {
+  font-size: 1.02rem;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  color: var(--text);
+}
+
+.aisle-count {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* An aisle you've finished recedes, so what's left stands out. */
+.aisle-group.is-cleared > .aisle .aisle-name { color: var(--muted); }
+.aisle-group.is-cleared > .aisle .aisle-count { color: var(--accent); }
+
+.gl-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  padding: 0.72rem 0.1rem;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.gl-item:last-child { border-bottom: 0; }
+
+.gl-item input[type='checkbox'] {
+  width: 1.35rem;
+  height: 1.35rem;
+  flex: none;
+  margin: 0.1rem 0 0;
+  accent-color: var(--accent);
+}
+
+.gl-text { flex: 1 1 auto; min-width: 0; line-height: 1.4; }
+
+.gl-amount { font-weight: 700; margin-right: 0.35rem; }
+
+.gl-note {
+  display: block;
+  font-size: 0.77rem;
+  color: var(--muted);
+  margin-top: 0.1rem;
+}
+
+.gl-item.is-done .gl-text {
+  color: var(--done);
+  text-decoration: line-through;
+}
+
+.gl-item.is-done .src-num { opacity: 0.4; }
+
+.progress {
+  height: 0.5rem;
+  background: var(--surface-2);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.18s ease-out;
+}
+
+/* ------------------------------------------- non-recipe additions section */
+
+.extras-form { margin-top: 0.3rem; }
+
+.extras-form .field { margin-bottom: 0.8rem; }
+
+.extras-form .field:last-of-type { margin-bottom: 0; }
+
+.extras-form label { margin-top: 0; }
+
+.extras-list { margin-top: 1rem; }
+
+.extras-list .sub-head { margin-top: 0; }
+
+.extra-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.9rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.extra-row:last-child { border-bottom: 0; }
+
+.extra-main { min-width: 0; flex: 1 1 auto; }
+.extra-name { font-size: 0.93rem; line-height: 1.35; }
+.extra-aisle { display: block; font-size: 0.78rem; color: var(--muted); margin-top: 0.15rem; }
+
+/* ------------------------------------------------------- recipe entries */
+
+.recipe {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 0.9rem 1rem;
+  margin-bottom: 0.65rem;
+  box-shadow: var(--shadow);
+}
+
+.recipe > summary { cursor: pointer; list-style: none; display: block; }
+.recipe > summary::-webkit-details-marker { display: none; }
+
+.recipe-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.7rem; }
+
+.recipe-name {
+  font-weight: 650;
+  font-size: 1rem;
+  letter-spacing: -0.012em;
+  line-height: 1.3;
+}
+
+.recipe-desc {
+  color: var(--text-2);
+  font-size: 0.87rem;
+  line-height: 1.45;
+  margin-top: 0.25rem;
+}
+
+.recipe-meta {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-top: 0.35rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.cat-tag {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+/* "How to make it" links — tappable pills rather than small text links. */
+.how-to {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0.75rem 0 0.2rem;
+}
+
+.link-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 0.84rem;
+  font-weight: 600;
+  text-decoration: none;
+  min-height: 38px;
+}
+
+.link-btn:active { transform: translateY(1px); }
+
+.ing-list { margin: 0.35rem 0 0.7rem; padding-left: 1.15rem; }
+.ing-list li { margin: 0.16rem 0; }
+
+.sub-head {
+  margin: 0.9rem 0 0.15rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* -------------------------------------------------------------- banners */
+
+.banner {
+  padding: 0.7rem 0.85rem;
+  border-radius: 10px;
+  font-size: 0.87rem;
+  line-height: 1.45;
+  margin: 0.7rem 0;
+  border: 1px solid transparent;
+}
+
+.banner-ok { background: var(--accent-soft); border-color: var(--accent-border); color: var(--text); }
+.banner-warn { background: var(--surface-2); border-color: var(--border-strong); color: var(--text-2); margin: 0.7rem 0.85rem; }
+.banner-err { background: var(--danger-soft); border-color: var(--danger); color: var(--danger); }
+
+.status { font-size: 0.87rem; margin-top: 0.7rem; }
+
+.summary-line {
+  background: var(--surface-2);
+  border-radius: 10px;
+  padding: 0.7rem 0.85rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--text-2);
+  margin-top: 0.7rem;
+}
+
+.summary-line strong { color: var(--text); }
+
+/* ---------------------------------------------------------------- toast */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(1.2rem + var(--safe-bottom));
+  transform: translateX(-50%);
+  z-index: 60;
+  max-width: 88vw;
+  padding: 0.7rem 1.15rem;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--ink-text);
+  font-size: 0.88rem;
+  font-weight: 600;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.22);
+}
+
+/* ---------------------------------------------------------------- modal */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.2rem;
+  background: rgba(9, 9, 11, 0.5);
+}
+
+.modal-box {
+  width: 100%;
+  max-width: 360px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.2rem;
+  box-shadow: var(--shadow-lift);
+}
+
+.modal-box p { margin: 0 0 0.9rem; line-height: 1.5; }
+
+hr { border: 0; border-top: 1px solid var(--border); margin: 1rem 0; }
+
+/* Slightly roomier on a tablet or desktop, still single-column. */
+@media (min-width: 600px) {
+  main { padding: 1.1rem; }
+  .catbar { margin: 0 -1.1rem; padding-left: 1.1rem; padding-right: 1.1rem; }
+}

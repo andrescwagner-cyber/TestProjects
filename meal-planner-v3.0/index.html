@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="description" content="Weekly meal planner and dynamic grocery list that works offline on your phone." />
+<title>Meal Planner</title>
+
+<!-- Installable-app plumbing: lets iOS/Android run this full-screen from the home screen. -->
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Meals" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" />
+<link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+<header class="app-header">
+  <h1>Meal Planner</h1>
+  <button id="btn-settings" class="icon-btn" type="button">Backup</button>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="Main sections">
+  <button class="tab is-active" role="tab" data-tab="vault" aria-selected="true">Recipes</button>
+  <button class="tab" role="tab" data-tab="plan" aria-selected="false">Planner</button>
+  <button class="tab" role="tab" data-tab="list" aria-selected="false">Grocery</button>
+</nav>
+
+<div id="storage-warning" class="banner banner-warn" hidden>
+  This browser is blocking site storage (private browsing?), so your recipes
+  won't be saved when you close the tab.
+</div>
+
+<main>
+
+  <!-- ================= RECIPES ================= -->
+  <section id="tab-vault" class="panel is-active" role="tabpanel">
+
+    <details id="add-recipe" class="card">
+      <summary>Add a recipe</summary>
+
+      <div class="segmented" role="tablist" aria-label="How to add a recipe">
+        <button class="seg is-active" type="button" data-src="url" aria-selected="true">From a link</button>
+        <button class="seg" type="button" data-src="manual" aria-selected="false">Type it in</button>
+      </div>
+
+      <!-- URL import -->
+      <form id="form-url" class="src-pane is-active" autocomplete="off">
+        <label for="in-url">Paste a recipe link</label>
+        <input id="in-url" type="url" inputmode="url" placeholder="https://www.allrecipes.com/recipe/..." />
+        <button class="btn btn-primary" type="submit">Get the ingredients</button>
+        <p class="hint">Works on most recipe sites. If a site blocks us, type the recipe in instead.</p>
+        <div id="url-status" class="status" hidden></div>
+      </form>
+
+      <!-- Review step after a successful import -->
+      <form id="form-review" class="src-pane" hidden autocomplete="off">
+        <div class="banner banner-ok" id="review-note"></div>
+        <label for="rv-title">Recipe name</label>
+        <input id="rv-title" type="text" required />
+        <label for="rv-category">Category</label>
+        <select id="rv-category"></select>
+        <label for="rv-description">Short description <span class="hint-inline">optional</span></label>
+        <input id="rv-description" type="text" placeholder="One line about this meal" />
+        <label for="rv-servings">How many servings does the original recipe make?</label>
+        <input id="rv-servings" type="number" min="1" max="100" step="1" required />
+        <label for="rv-main">Main ingredients <span class="hint-inline">one per line</span></label>
+        <textarea id="rv-main" rows="9"></textarea>
+        <label for="rv-seasonings">Seasonings and condiments <span class="hint-inline">one per line</span></label>
+        <textarea id="rv-seasonings" rows="5"></textarea>
+        <input id="rv-url" type="hidden" />
+        <div class="row">
+          <button class="btn btn-primary" type="submit">Save recipe</button>
+          <button class="btn btn-ghost" type="button" id="rv-cancel">Discard</button>
+        </div>
+      </form>
+
+      <!-- Manual entry -->
+      <form id="form-manual" class="src-pane" autocomplete="off">
+        <label for="mn-title">Recipe name</label>
+        <input id="mn-title" type="text" placeholder="Garlic butter chicken" required />
+        <label for="mn-category">Category</label>
+        <select id="mn-category"></select>
+        <label for="mn-description">Short description <span class="hint-inline">optional</span></label>
+        <input id="mn-description" type="text" placeholder="One line about this meal" />
+        <label for="mn-servings">How many servings does it make?</label>
+        <input id="mn-servings" type="number" min="1" max="100" step="1" value="4" required />
+        <label for="mn-main">Ingredients <span class="hint-inline">one per line</span></label>
+        <textarea id="mn-main" rows="8" placeholder="1 lb ground beef&#10;2 cloves garlic, minced&#10;1 yellow onion, diced&#10;1 tsp kosher salt" required></textarea>
+        <label for="mn-seasonings">Seasonings and condiments <span class="hint-inline">optional, one per line</span></label>
+        <textarea id="mn-seasonings" rows="4" placeholder="3 tbsp soy sauce"></textarea>
+        <label class="check-inline">
+          <input id="mn-autosort" type="checkbox" checked />
+          <span>Automatically move salt, spices and sauces to their own list</span>
+        </label>
+        <label for="mn-url">Link to the original <span class="hint-inline">optional</span></label>
+        <input id="mn-url" type="url" inputmode="url" placeholder="https://..." />
+        <button class="btn btn-primary" type="submit">Save recipe</button>
+      </form>
+    </details>
+
+    <div id="vault-empty" class="card empty" hidden>
+      <p><strong>No recipes yet.</strong></p>
+      <p id="seed-blurb">Add one above, or start with the built-in collection so you can try the planner right away.</p>
+      <button class="btn btn-primary" type="button" id="btn-seed">Add the built-in recipes</button>
+    </div>
+
+    <div id="vault-tools" hidden>
+      <input id="in-search" type="search" placeholder="Search recipes or ingredients" aria-label="Search recipes" />
+      <div id="catbar" class="catbar" role="tablist" aria-label="Recipe categories"></div>
+      <p id="vault-count" class="hint"></p>
+    </div>
+
+    <div id="recipe-list"></div>
+
+    <div id="seed-more" class="card" hidden>
+      <p class="card-title">Built-in recipes</p>
+      <p class="hint" id="seed-more-text"></p>
+      <button class="btn" type="button" id="btn-seed-more">Add the ones I don't have</button>
+    </div>
+
+    <details id="backup" class="card">
+      <summary>Backup and restore</summary>
+      <p class="hint">
+        Your recipes are saved on this device only. Export a backup file to
+        keep them safe or move them to another phone.
+      </p>
+      <div class="row">
+        <button class="btn" type="button" id="btn-export">Save backup file</button>
+        <button class="btn" type="button" id="btn-import">Restore backup</button>
+      </div>
+      <input id="file-import" type="file" accept="application/json,.json" hidden />
+      <p id="backup-status" class="status" hidden></p>
+      <hr />
+      <button class="btn btn-danger-ghost" type="button" id="btn-wipe">Delete everything on this device</button>
+      <!-- Lets you confirm which version is live after redeploying. -->
+      <p class="hint" id="app-version">Meal Planner version 3.0</p>
+    </details>
+
+  </section>
+
+  <!-- ================= PLANNER ================= -->
+  <section id="tab-plan" class="panel" role="tabpanel">
+
+    <div id="plan-empty" class="card empty" hidden>
+      <p><strong>Add some recipes first.</strong></p>
+      <p>Once your recipes are in, pick this week's meals here.</p>
+    </div>
+
+    <div id="plan-body" hidden>
+      <details class="card" id="card-people" open>
+        <summary>
+          <span class="sum-label">How many people?</span>
+          <span class="sum-meta" id="people-meta"></span>
+        </summary>
+
+        <label for="in-servings">People at the table</label>
+        <div class="stepper">
+          <button class="btn btn-step" type="button" id="srv-minus" aria-label="Fewer people">&minus;</button>
+          <input id="in-servings" type="number" min="1" max="50" step="1" inputmode="numeric" aria-label="People" />
+          <button class="btn btn-step" type="button" id="srv-plus" aria-label="More people">+</button>
+        </div>
+
+        <label for="in-extra">Spare portions per meal <span class="hint-inline">for leftovers</span></label>
+        <div class="stepper">
+          <button class="btn btn-step" type="button" id="ext-minus" aria-label="Fewer spare portions">&minus;</button>
+          <input id="in-extra" type="number" min="0" max="20" step="1" inputmode="numeric" aria-label="Spare portions" />
+          <button class="btn btn-step" type="button" id="ext-plus" aria-label="More spare portions">+</button>
+        </div>
+
+        <div class="summary-line" id="servings-summary"></div>
+      </details>
+
+      <details class="card" id="card-meals" open>
+        <summary>
+          <span class="sum-label">This week's meals</span>
+          <span class="sum-meta" id="plan-count"></span>
+        </summary>
+
+        <div id="plan-selected"></div>
+
+        <details class="subcard" id="card-picker">
+          <summary>
+            <span class="sum-label">Add or change meals</span>
+            <span class="sum-meta" id="picker-meta"></span>
+          </summary>
+          <input id="in-plan-search" type="search" placeholder="Search recipes" aria-label="Search recipes to add" />
+          <div id="plan-catbar" class="catbar" role="tablist" aria-label="Filter by category"></div>
+          <div id="recipe-rows" class="pick-list"></div>
+        </details>
+      </details>
+
+      <details class="card" id="card-random">
+        <summary>
+          <span class="sum-label">Can't decide?</span>
+          <span class="sum-meta">Pick at random</span>
+        </summary>
+        <label for="in-random">How many meals</label>
+        <div class="stepper">
+          <button class="btn btn-step" type="button" id="rnd-minus" aria-label="Fewer meals">&minus;</button>
+          <input id="in-random" type="number" min="1" max="50" step="1" value="4" inputmode="numeric" aria-label="Number of meals" />
+          <button class="btn btn-step" type="button" id="rnd-plus" aria-label="More meals">+</button>
+        </div>
+        <button class="btn btn-primary" type="button" id="btn-random">Pick meals for me</button>
+        <p class="hint">This replaces the current plan and clears any ticked items.</p>
+      </details>
+
+      <details class="card" id="card-plan-details" open>
+        <summary>
+          <span class="sum-label">What you'll be cooking</span>
+          <span class="sum-meta" id="details-meta"></span>
+        </summary>
+        <div id="plan-details"></div>
+      </details>
+    </div>
+
+  </section>
+
+  <!-- ================= GROCERY ================= -->
+  <section id="tab-list" class="panel" role="tabpanel">
+
+    <div id="list-empty" class="card empty" hidden>
+      <p><strong>Your list is empty.</strong></p>
+      <p>Pick meals in the Planner tab, or add a household item below.</p>
+    </div>
+
+    <div id="list-progress" class="card" hidden>
+      <div class="progress"><div id="progress-bar" class="progress-fill"></div></div>
+      <p id="progress-text" class="hint"></p>
+      <div class="summary-line" id="list-summary"></div>
+      <div id="list-legend" class="legend"></div>
+    </div>
+
+    <div id="grocery-list"></div>
+
+    <div class="card">
+      <p class="card-title">Add something that isn't in a recipe</p>
+      <form id="form-extra" class="extras-form" autocomplete="off">
+        <div class="field">
+          <label for="in-extra-item">What do you need?</label>
+          <input id="in-extra-item" type="text" placeholder="2 rolls paper towels" />
+          <p class="hint">You can include an amount, like "2 rolls" or "1 bag".</p>
+        </div>
+        <div class="field">
+          <label for="in-extra-aisle">Where is it in the store?</label>
+          <select id="in-extra-aisle"></select>
+        </div>
+        <button class="btn" type="submit">Add to list</button>
+      </form>
+      <div id="extra-list" class="extras-list"></div>
+    </div>
+
+    <div class="card">
+      <button class="btn" type="button" id="btn-copy">Copy list as text</button>
+      <div class="row">
+        <button class="btn" type="button" id="btn-uncheck">Untick everything</button>
+        <button class="btn btn-primary" type="button" id="btn-reset">Start a new week</button>
+      </div>
+      <p class="hint">
+        Ticks are saved the instant you tap them — lock your phone or close the
+        tab mid-shop and your progress will still be here.
+      </p>
+    </div>
+
+  </section>
+
+</main>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<!-- Confirmation dialog, used for destructive actions. -->
+<div id="confirm" class="modal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="confirm-text">
+    <p id="confirm-text"></p>
+    <div class="row">
+      <button class="btn btn-ghost" type="button" id="confirm-no">Cancel</button>
+      <button class="btn btn-primary" type="button" id="confirm-yes">Yes, do it</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

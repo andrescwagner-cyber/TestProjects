@@ -1,0 +1,49 @@
+#
+# Netlify configuration.
+#
+# There is no build step: the site is plain HTML/CSS/JS, so Netlify just
+# publishes this folder as-is and deploys the one function.
+#
+
+[build]
+  # Publish the folder that contains index.html (this folder).
+  publish = "."
+  # No bundler, no npm install, nothing to compile.
+  command = ""
+  functions = "netlify/functions"
+
+[functions]
+  # Node 18+ provides fetch and AbortSignal.timeout, which the function uses.
+  node_bundler = "esbuild"
+
+# Friendly path for the recipe importer: /api/scrape
+[[redirects]]
+  from = "/api/scrape"
+  to = "/.netlify/functions/scrape-recipe"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "SAMEORIGIN"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# The service worker must never be served stale, or the app can get stuck on
+# an old version after you redeploy.
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+    Cache-Control = "public, max-age=0, must-revalidate"
