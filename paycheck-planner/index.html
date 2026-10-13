@@ -6,6 +6,10 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0e0e10">
+<meta name="apple-mobile-web-app-title" content="Paycheck">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>Paycheck Planner</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -874,6 +878,7 @@ $("#fab").addEventListener("click", () => needReal(() => openTx()));
 const cached = lsLoad();
 if (cached) { state = { settings: cached.settings, weeks: cached.weeks || {}, demo: false }; mode = "local"; ensureSchedule(); if (cached.settings.look) { look = { ...look, ...cached.settings.look }; applyLook(); } }
 render();
+if ("serviceWorker" in navigator && location.protocol === "https:") { navigator.serviceWorker.register("sw.js").catch(() => {}); }
 connect().then(() => { if (migrated) toast("Switched to twice-a-month pay. Check your usual paycheck in Settings."); });
 })();
 </script>

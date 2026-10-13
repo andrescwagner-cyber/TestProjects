@@ -13,6 +13,6 @@ A budgeting app for people paid twice a month. Enter your check, subtract your b
 
 ## Use it
 
-It's a single `index.html` file with no build step. Open it in a browser, or turn on GitHub Pages for this repo (Settings → Pages → Deploy from branch → `main`, `/ (root)`) and open `/paycheck-planner/` on your phone. Then use "Add to Home Screen" to keep it like an app.
+It's a plain static site with no build step. On Netlify, import this repo and set the base directory to `paycheck-planner`. Then open the site in Safari on your iPhone and tap Share → Add to Home Screen. It installs with its own icon, opens full screen, and works offline.
 
-Your data is saved in your browser's local storage, on that device only. Clearing site data erases it.
+Your data is saved on that device in the app's local storage. Deleting the home-screen app or clearing Safari's website data erases it.
