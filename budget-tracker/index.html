@@ -159,6 +159,20 @@ header.top .in{max-width:520px;margin:0 auto;display:flex;flex-direction:column;
 .wk{display:flex;justify-content:space-between;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding-top:6px}
 .empty{color:var(--muted);font-size:14px;text-align:center;padding:14px 0}
 
+/* help: a "?" next to a heading opens a plain-language explanation right under it */
+.info{width:20px;height:20px;border-radius:50%;border:1.5px solid currentColor;font:700 12px/1 var(--body);display:inline-grid;place-items:center;color:var(--muted);vertical-align:2px;margin-left:6px;flex:none;letter-spacing:0;text-transform:none}
+.info:hover{color:var(--ink)}
+.info[aria-expanded="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.hero .info{color:var(--accent-ink);opacity:.9}
+.hero .info[aria-expanded="true"]{background:var(--accent-ink);color:var(--accent);opacity:1}
+.helpbox{margin:0;font-size:13.5px;line-height:1.5;padding:10px 12px;border-radius:10px;background:var(--sunk);color:var(--ink);border-left:3px solid var(--accent);font-weight:400;text-transform:none;letter-spacing:0}
+.helpbox b{font-weight:700}
+.hero .helpbox{background:color-mix(in srgb,var(--accent-ink) 14%,transparent);color:var(--accent-ink);border-left-color:var(--accent-ink);margin-top:12px}
+.step .helpbox{grid-column:1/-1}
+.intro ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.intro ol li::marker{font-family:var(--mono);color:var(--muted)}
+.guide h4{font-family:var(--display);font-size:16px;margin:14px 0 4px}
+.guide p{margin:0 0 6px;font-size:14px;line-height:1.55}
 .tablewrap{overflow-x:auto;margin-inline:-4px}
 table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:340px}
 th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;text-align:right;padding:6px 4px;border-bottom:1px solid var(--line)}
@@ -196,7 +210,7 @@ input[type=range]{padding:0;border:0;background:none;accent-color:var(--accent)}
 </style>
 
 <header class="top"><div class="in">
-  <div class="brand"><h1>Budget Tracker</h1><span class="save" id="savestate">Loading</span></div>
+  <div class="brand"><h1>Budget Tracker</h1><div style="display:flex;gap:8px;align-items:center"><span class="save" id="savestate">Loading</span><button class="info" data-act="guide" aria-label="How this app works" title="How this app works">?</button></div></div>
   <nav class="tabs" id="tabs" aria-label="Sections"></nav>
 </div></header>
 <main id="app"><p class="loading">Loading your paychecks, bills and card balance…</p></main>
@@ -230,8 +244,38 @@ const ICON={
   ok:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>'
 };
 
+// ---------- help text ----------
+const HELP={
+  free:"Money from this paycheck that isn't spoken for. It's what's left after bills, your buffer, the card and savings, minus anything you've logged in Spending. The per-day number spreads it evenly over the days until your next payday.",
+  planned:"What this future check should leave you to spend, based on your bills and where your buffer and card balance will be by then. It updates as things change.",
+  cover:"When you buy something with the credit card using your free money, the cash for it is still sitting in checking. Sending that amount to the card right away keeps the balance from creeping back up.",
+  split:"Where every dollar of this paycheck goes. <b>Bills</b> are the ones that charge before your next payday. <b>Buffer</b> is emergency cash. <b>Card</b> is your credit card payment. <b>Savings</b> is long-term money. <b>Free</b> is yours to spend. The % under each is its share of this check.",
+  steps:"Your to-do list for this paycheck. When the money hits your account, tap <b>My paycheck landed</b> to confirm the amount. Then make each move in your bank app and tick it here. Ticking updates your buffer, card and savings balances in this app; it doesn't move real money.",
+  bills:"Every bill that charges between this payday and the next. Leave this much in checking. Tick each one when it actually charges. Tap an amount to change it for this month only, for example when electric comes in higher.",
+  buffer:"A cushion of cash, kept separate, for surprises like a car repair, so they never go on the credit card. Until it reaches your target, money left after bills fills it first. Don't want a buffer? Turn it off in Setup, under Split.",
+  card:"How much to pay toward the credit card from this check. Once the buffer is full, everything left after bills goes here until the balance is $0.",
+  savings:"Long-term savings. Your savings % kicks in once the buffer is full and the card is paid off.",
+  freestep:"What's left for everything that isn't a bill: eating out, gas, fun. Log purchases in the Spending tab to see it count down.",
+  spendsum:"<b>Free money</b> is what this check left you to spend. <b>Debit spent</b> and <b>Card spent</b> are what you've logged, split by how you paid. <b>Left</b> is what you can still spend before the next payday.",
+  spendlist:"Every purchase you've logged for this pay period, grouped by week. Tap one to edit or delete it. Card purchases are also added to your card balance.",
+  cardbal:"What you owe on the credit card. Payments you tick on the Paycheck tab lower it, and card purchases you log raise it. If it doesn't match your card app (interest, refunds, a missed purchase), tap <b>Update card balance</b> and type the real number.",
+  bufferbox:"Your emergency cushion. The goal is to never put a surprise expense on the card. If you use some of it, update the balance and the app will refill it from your next checks.",
+  savingsbox:"Long-term savings you've moved over from paychecks. Update it any time to match your bank.",
+  payoff:"A forecast, one row per paycheck, assuming your bills stay the same and you cover any new card purchases. <b>Buffer</b> and <b>Card pmt</b> are what that check sends to each. <b>Card after</b> is the balance after that payment. The highlighted row is when the card hits $0. A ✓ means you've already entered that check.",
+  activity:"A history of everything that changed your balances: card payments, card purchases, buffer and savings moves, and manual updates.",
+  paycheck:"Your usual take-home pay per check and the days you're paid. If a check is different, you can change that one when it lands.",
+  splitset:"<b>Bills target</b> is a yardstick that flags checks where bills run high. <b>Savings %</b> is the share of each check that goes to savings once you're out of payoff mode. <b>Payoff mode</b> sends everything left after bills to your buffer, then the card, until both are done. <b>Keep free per check</b> is spending money you hold back while paying off.",
+  billsset:"Your recurring bills and the day each one charges. Each bill is paid from the paycheck that lands before its charge date. Twice-a-month costs, like groceries, work best as two bills.",
+  balances:"The current amounts in your credit card, buffer and savings. Set these to match your bank and card apps whenever they drift."
+};
+const openHelp=new Set();
+const info=k=>`<button class="info" data-act="help" data-k="${k}" aria-expanded="${openHelp.has(k)}" aria-label="What does this mean?" title="What does this mean?">?</button>`;
+const helpBox=k=>openHelp.has(k)?`<p class="helpbox">${HELP[k]}</p>`:"";
+const INTRO="andres-budget-intro-done";
+let introDone=false;try{introDone=localStorage.getItem(INTRO)==="1";}catch(e){}
+
 // ---------- state ----------
-const BASE_SETTINGS={payAmount:0,payDays:[15,31],split:{bills:60,savings:20},bufferTarget:1000,order:"buffer",payoffMode:true,keepFree:0,bills:[]};
+const BASE_SETTINGS={payAmount:0,payDays:[15,31],split:{bills:60,savings:20},bufferTarget:1000,useBuffer:true,order:"buffer",payoffMode:true,keepFree:0,bills:[]};
 // ---------- look (color theme + light/dark) ----------
 const ACCENTS=[["bank","Bank green","#1d5c47","#72c9a3"],["ocean","Ocean","#1f4f8a","#84aee8"],["plum","Plum","#5a3577","#c7a3e3"],["ember","Ember","#9a3d12","#f19366"],["graphite","Graphite","#2b3036","#c9d1d8"],["rose","Rose","#8f2f52","#f08fb3"]];
 const LOOK="andres-budget-look";const hostTheme=document.documentElement.getAttribute("data-theme");
@@ -242,7 +286,8 @@ function applyLook(){const r=document.documentElement;
   if(look.mode==="light"||look.mode==="dark")r.setAttribute("data-theme",look.mode);else if(hostTheme)r.setAttribute("data-theme",hostTheme);else r.removeAttribute("data-theme");}
 applyLook();
 function setLook(patch){look={...look,...patch};applyLook();try{localStorage.setItem(LOOK,JSON.stringify(look));}catch(e){}S.look={...look};saveSettings();render();}
-const payoffOn=bal=>S.payoffMode!==false&&(r2(S.bufferTarget-bal.buffer)>0.004||bal.card>0.004);
+const bufT=()=>S.useBuffer===false?0:(+S.bufferTarget||0);
+const payoffOn=bal=>S.payoffMode!==false&&(r2(bufT()-bal.buffer)>0.004||bal.card>0.004);
 let S=clone(BASE_SETTINGS), B={buffer:0,card:0,savings:0,log:[]}, P={};
 let mode="loading", DB=null, loaded={s:false,b:false,p:false}, pending=0, readOnly=false;
 let DATES=[], CUR=0;
@@ -278,7 +323,7 @@ function plan(i,bal){
   const p=per(i);const pay=r2(p.amount!=null?p.amount:S.payAmount);const lines=billLines(i);const billsTotal=sum(lines.map(l=>l.amt));const left=r2(pay-billsTotal);
   let b,c,s,save;
   if(p.locked){b=r2(p.locked.buffer);c=r2(p.locked.card);s=r2(p.locked.savings);save=r2(b+c+s);}
-  else{const need=Math.max(0,r2(S.bufferTarget-bal.buffer));const owe=Math.max(0,r2(bal.card));const keep=Math.max(0,+S.keepFree||0);
+  else{const need=Math.max(0,r2(bufT()-bal.buffer));const owe=Math.max(0,r2(bal.card));const keep=Math.max(0,+S.keepFree||0);
     // Payoff mode: everything after bills (minus the free-money allowance) fills the buffer, then the card. Normal mode: the savings % does.
     const pool=payoffOn(bal)?Math.floor(Math.max(0,left-keep)):Math.floor(Math.min(pay*S.split.savings/100,Math.max(0,left)));
     if(S.order==="card"){c=Math.min(pool,owe);b=Math.min(r2(pool-c),need);}else{b=Math.min(pool,need);c=Math.min(r2(pool-b),owe);}
@@ -368,43 +413,51 @@ function daysLeft(i){const end=DATES[i+1];const t=new Date();t.setHours(0,0,0,0)
 function vPlan(){
   const i=ui.idx;const pl=planShown(i);const p=per(i);const sp=spentOf(i);const mv=p.moves||{};
   let h=pnav();
+  if(!introDone&&!setupNeeded())h=`<section class="card intro"><h3>How this works</h3><ol>
+   <li>Each paycheck pays the bills that charge before your next payday.</li>
+   <li>What's left ${S.useBuffer!==false?"fills your buffer (emergency cash), then pays":"pays"} down the credit card, then goes to savings.</li>
+   <li>When a check lands, tap <b>My paycheck landed</b>, make the moves in your bank app, and tick them off here.</li>
+   <li>Log purchases with <b>Add spending</b> to see your free money count down.</li></ol>
+   <p class="hint">Tap any <b>?</b> for what a section means.</p><div class="row2"><button class="btn sm" data-act="introok">Got it</button><button class="btn ghost sm" data-act="guide">Full guide</button></div></section>`+h;
   // hero
   if(i<=CUR){
     const free=r2(pl.fun-sp.total);const pct=pl.fun>0?Math.min(100,sp.total/pl.fun*100):(sp.total>0?100:0);
     const sub=i===CUR?(free>0?`${fmt(r2(free/daysLeft(i)),true)} a day for the next ${daysLeft(i)} day${daysLeft(i)>1?"s":""}`:free<0?`Over by ${fmt(-free,true)}. It'll come out of your next check.`:`Nothing free until ${md(DATES[i+1])}.`):`Spent ${fmt(sp.total,true)} of ${fmt(pl.fun,true)}`;
-    h+=`<section class="hero"><div class="lab">${i===CUR?`Free to spend until ${md(DATES[i+1])}`:"Left unspent this period"}</div><div class="big num">${bigMoney(free)}</div><div class="sub">${sub}</div>${i===CUR?`<div class="sub" style="opacity:.75;margin-top:2px">Spent ${fmt(sp.total,true)} of ${fmt(pl.fun,true)}</div>`:""}<div class="track"><i style="width:${pct}%"></i></div></section>`;
+    h+=`<section class="hero"><div class="lab">${i===CUR?`Free to spend until ${md(DATES[i+1])}`:"Left unspent this period"}${info("free")}</div><div class="big num">${bigMoney(free)}</div><div class="sub">${sub}</div>${i===CUR?`<div class="sub" style="opacity:.75;margin-top:2px">Spent ${fmt(sp.total,true)} of ${fmt(pl.fun,true)}</div>`:""}<div class="track"><i style="width:${pct}%"></i></div>${helpBox("free")}</section>`;
   }else{
-    h+=`<section class="hero"><div class="lab">Planned free money from this check</div><div class="big num">${bigMoney(pl.fun)}</div><div class="sub">Lands ${dmd(DATES[i])}. Numbers assume no new card spending before then.</div></section>`;
+    h+=`<section class="hero"><div class="lab">Planned free money from this check${info("planned")}</div><div class="big num">${bigMoney(pl.fun)}</div><div class="sub">Lands ${dmd(DATES[i])}. Numbers assume no new card spending before then.</div>${helpBox("planned")}</section>`;
   }
   // card cover prompt
   const owed=r2(sp.card-sp.covered);
-  if(i<=CUR&&owed>0.004)h+=`<section class="card"><h3>Cover this period's card purchases</h3><p class="hint">You put ${fmt(sp.card,true)} on the card from your free money${sp.covered?`, and already sent ${fmt(sp.covered,true)}`:""}. The cash is still in checking, so send it to the card to keep the balance from growing.</p><button class="btn" data-act="cover" data-amt="${owed}">Pay ${fmt(owed,true)} to the card</button></section>`;
+  if(i<=CUR&&owed>0.004)h+=`<section class="card"><h3>Cover this period's card purchases${info("cover")}</h3>${helpBox("cover")}<p class="hint">You put ${fmt(sp.card,true)} on the card from your free money${sp.covered?`, and already sent ${fmt(sp.covered,true)}`:""}. The cash is still in checking, so send it to the card to keep the balance from growing.</p><button class="btn" data-act="cover" data-amt="${owed}">Pay ${fmt(owed,true)} to the card</button></section>`;
   // stub
-  const segs=[["Bills",pl.billsTotal,"--c-bills"],["Buffer",pl.buffer,"--c-buffer"],["Card",pl.card,"--c-card"],["Savings",pl.savings,"--c-save"],["Free",Math.max(0,pl.fun),"--c-free"]];
+  const bufOn=S.useBuffer!==false;
+  const segs=[["Bills",pl.billsTotal,"--c-bills"],["Buffer",pl.buffer,"--c-buffer"],["Card",pl.card,"--c-card"],["Savings",pl.savings,"--c-save"],["Free",Math.max(0,pl.fun),"--c-free"]].filter(s=>bufOn||s[0]!=="Buffer");
   const tot=Math.max(pl.pay,pl.billsTotal,1);const billPct=pl.pay?Math.round(pl.billsTotal/pl.pay*100):0;
   let target;
-  if(pl.left<0)target=`<p class="note bad">Bills due before your next check are ${fmt(-pl.left,true)} more than this paycheck. Cover the gap from your buffer, then refill it next check.</p>`;
+  if(pl.left<0)target=`<p class="note bad">Bills due before your next check are ${fmt(-pl.left,true)} more than this paycheck. ${bufOn?"Cover the gap from your buffer, then refill it next check.":"Set aside money from your other check to cover the gap."}</p>`;
   else if(billPct>S.split.bills)target=`<p class="note warn">Bills take ${billPct}% of this check, over your ${S.split.bills}% target. That's normal for the check that pays rent; your other check carries the savings.</p>`;
   else target=`<p class="note">Bills take ${billPct}% of this check (target ${S.split.bills}%). Savings gets ${S.split.savings}% of the check when there's room after bills.</p>`;
-  if(!pl.locked&&pl.left>0&&payoffOn(i<=CUR?B:(projection(i-CUR+1).before[i]||B)))target+=`<p class="note">Payoff mode: everything left after bills${S.keepFree?` except ${fmt(S.keepFree)} to spend`:""} goes to your buffer, then the card. The ${S.split.savings}% split comes back once both are done.</p>`;
-  h+=`<section class="card"><div class="stubhead"><div><p class="eyebrow">Paycheck${pl.locked?"":" (expected)"}</p><div class="amt num">${fmt(pl.pay,true)}</div></div><span class="micr">CHK ${iso(DATES[i]).replaceAll("-","")} · ${pl.locked?"LANDED":"PLANNED"}</span></div>
+  if(!pl.locked&&pl.left>0&&payoffOn(i<=CUR?B:(projection(i-CUR+1).before[i]||B)))target+=`<p class="note">Payoff mode: everything left after bills${S.keepFree?` except ${fmt(S.keepFree)} to spend`:""} goes to ${bufOn?"your buffer, then the card":"the card"}. The ${S.split.savings}% split comes back once ${bufOn?"both are":"it's"} done.</p>`;
+  h+=`<section class="card"><div class="stubhead"><div><p class="eyebrow">Paycheck${pl.locked?"":" (expected)"}${info("split")}</p><div class="amt num">${fmt(pl.pay,true)}</div></div><span class="micr">CHK ${iso(DATES[i]).replaceAll("-","")} · ${pl.locked?"LANDED":"PLANNED"}</span></div>
   <div class="strip" role="img" aria-label="How this paycheck splits">${segs.filter(s=>s[1]>0).map(s=>`<i style="width:${s[1]/tot*100}%;background:var(${s[2]})"></i>`).join("")}</div>
-  <div class="legend">${segs.map(s=>`<div style="--dot:var(${s[2]})"><span>${s[0]}</span><b class="num">${fmt(s[1],true)}</b><em>${pl.pay?Math.round(s[1]/pl.pay*100):0}%</em></div>`).join("")}</div>${target}</section>`;
+  ${helpBox("split")}<div class="legend">${segs.map(s=>`<div style="--dot:var(${s[2]})"><span>${s[0]}</span><b class="num">${fmt(s[1],true)}</b><em>${pl.pay?Math.round(s[1]/pl.pay*100):0}%</em></div>`).join("")}</div>${target}</section>`;
   // checklist
   const lk=pl.locked;
-  const step=(n,key,label,amt,sub,color)=>{const zero=amt<=0.004;const on=!!mv[key];
-    return `<div class="step${zero?" zero":""}${on?" done":""}" style="--dot:var(${color})"><span class="n">${n}</span><div class="t"><b>${label}</b><small>${sub}</small></div>
-    <div class="row2" style="align-items:center;gap:10px;flex-wrap:nowrap"><span class="v num">${fmt(amt,true)}</span>${key&&!zero?`<button class="tick" data-act="move" data-k="${key}" aria-pressed="${on}" aria-label="Mark done" ${lk?"":"disabled"}>${ICON.ok}</button>`:'<span style="width:28px"></span>'}</div></div>`;};
+  const step=(n,key,label,amt,sub,color,hk)=>{const zero=amt<=0.004;const on=!!mv[key];
+    return `<div class="step${zero?" zero":""}${on?" done":""}" style="--dot:var(${color})"><span class="n">${n}</span><div class="t"><b>${label}${hk?info(hk):""}</b><small>${sub}</small></div>
+    <div class="row2" style="align-items:center;gap:10px;flex-wrap:nowrap"><span class="v num">${fmt(amt,true)}</span>${key&&!zero?`<button class="tick" data-act="move" data-k="${key}" aria-pressed="${on}" aria-label="Mark done" ${lk?"":"disabled"}>${ICON.ok}</button>`:'<span style="width:28px"></span>'}</div>${hk?helpBox(hk):""}</div>`;};
   const billRows=pl.lines.length?`<div class="bills">${pl.lines.map(l=>`<div class="bill${l.paid?" paid":""}"><button class="tick" data-act="billpaid" data-id="${l.id}" aria-pressed="${l.paid}" aria-label="Mark ${esc(l.name)} paid">${ICON.ok}</button><span class="nm">${esc(l.name)}<small>${l.day==="each"?"this check":DOW[l.due.getDay()]+" "+md(l.due)}</small></span><button class="amt num" data-act="billamt" data-id="${l.id}" aria-label="Change ${esc(l.name)} amount">${fmt(l.amt,true)}</button></div>`).join("")}</div>`:"";
   const afterCard=Math.max(0,r2((i<=CUR?B.card:(projection(i-CUR+1).before[i]||B).card)-(mv.card?0:pl.card)));
   const bufNow=i<=CUR?B.buffer:(projection(i-CUR+1).before[i]||B).buffer;
-  h+=`<section class="card"><div class="stubhead"><h3>${lk?"Do these in order":"When this check lands"}</h3>${lk?`<button class="linkbtn" data-act="adjust">Adjust</button>`:""}</div>
+  let sn=1;
+  h+=`<section class="card"><div class="stubhead"><h3>${lk?"Do these in order":"When this check lands"}${info("steps")}</h3>${lk?`<button class="linkbtn" data-act="adjust">Adjust</button>`:""}</div>${helpBox("steps")}
   <div class="steps">
-   <div>${step(1,null,`Keep ${fmt(pl.billsTotal,true)} for bills`,pl.billsTotal,`${pl.lines.length} due before ${md(DATES[i+1])}. Tick each when it charges.`,"--c-bills")}${billRows}</div>
-   ${step(2,"buffer","Move to your buffer",pl.buffer,pl.buffer>0?`Buffer ${fmt(bufNow)} of ${fmt(S.bufferTarget)}`:bufNow>=S.bufferTarget?"Buffer is full":"Nothing this check","--c-buffer")}
-   ${step(3,"card","Pay the credit card",pl.card,pl.card>0?`Balance after: ${fmt(afterCard,true)}`:B.card<=0?"Card is paid off":"Nothing this check","--c-card")}
-   ${step(4,"savings","Move to savings",pl.savings,pl.savings>0?"Long-term savings":"Nothing this check","--c-save")}
-   ${step(5,null,"Keep the rest to spend",Math.max(0,pl.fun),"Your free money until the next check","--c-free")}
+   <div>${step(sn++,null,`Keep ${fmt(pl.billsTotal,true)} for bills`,pl.billsTotal,`${pl.lines.length} due before ${md(DATES[i+1])}. Tick each when it charges.`,"--c-bills","bills")}${billRows}</div>
+   ${bufOn?step(sn++,"buffer","Move to your buffer",pl.buffer,pl.buffer>0?`Buffer ${fmt(bufNow)} of ${fmt(bufT())}`:bufNow>=bufT()?"Buffer is full":"Nothing this check","--c-buffer","buffer"):""}
+   ${step(sn++,"card","Pay the credit card",pl.card,pl.card>0?`Balance after: ${fmt(afterCard,true)}`:B.card<=0?"Card is paid off":"Nothing this check","--c-card","card")}
+   ${step(sn++,"savings","Move to savings",pl.savings,pl.savings>0?"Long-term savings":"Nothing this check","--c-save","savings")}
+   ${step(sn++,null,"Keep the rest to spend",Math.max(0,pl.fun),"Your free money until the next check","--c-free","freestep")}
   </div>
   ${lk?"":`<button class="btn" data-act="landed" ${i>CUR+1?"disabled style=\"opacity:.5\"":""}>My paycheck landed</button>${i>CUR+1?`<p class="hint">You can enter this check once it's the next one up.</p>`:`<p class="hint">Confirm the amount and these moves get locked in, so you can tick them off.</p>`}`}
   </section>`;
@@ -414,14 +467,14 @@ function vPlan(){
 function vSpend(){
   const i=ui.idx;const pl=planShown(i);const sp=spentOf(i);const tx=(per(i).tx||[]).slice().sort((a,b)=>b.date.localeCompare(a.date)||b.t-a.t);
   let h=pnav();
-  h+=`<section class="card"><div class="legend">
+  h+=`<section class="card"><h3>This pay period${info("spendsum")}</h3>${helpBox("spendsum")}<div class="legend">
    <div style="--dot:var(--c-free)"><span>Free money</span><b class="num">${fmt(pl.fun,true)}</b></div>
    <div style="--dot:var(--c-bills)"><span>Debit spent</span><b class="num">${fmt(sp.debit,true)}</b></div>
    <div style="--dot:var(--c-card)"><span>Card spent</span><b class="num">${fmt(sp.card,true)}</b></div>
    <div style="--dot:var(--accent)"><span>Left</span><b class="num">${fmt(r2(pl.fun-sp.total),true)}</b></div></div>
    <div class="meter"><i style="width:${pl.fun>0?Math.min(100,sp.total/pl.fun*100):0}%;background:${sp.total>pl.fun?"var(--bad)":"var(--c-free)"}"></i></div>
    ${r2(sp.card-sp.covered)>0.004?`<div class="row2" style="align-items:center"><p class="hint" style="flex:2">${fmt(r2(sp.card-sp.covered),true)} on the card isn't covered yet.</p><button class="btn sm" data-act="cover" data-amt="${r2(sp.card-sp.covered)}">Pay it</button></div>`:""}</section>`;
-  h+=`<section class="card"><h3>Spending this period</h3>`;
+  h+=`<section class="card"><h3>Spending this period${info("spendlist")}</h3>${helpBox("spendlist")}`;
   if(!tx.length)h+=`<p class="empty">No spending logged yet. Tap Add spending each time you buy something outside your bills.</p>`;
   else{
     let wk="";tx.forEach(t=>{const d=fromIso(t.date);const ws=new Date(d);ws.setDate(d.getDate()-d.getDay());const k=iso(ws);
@@ -433,22 +486,23 @@ function vSpend(){
 
 function vCard(){
   const pr=projection(26);const payoff=B.card>0?pr.rows.find(r=>r.after.card<=0):null;
-  let h=`<section class="hero" style="background:${B.card>0?"var(--c-card)":"var(--good)"}"><div class="lab">Credit card balance</div><div class="big num">${bigMoney(B.card)}</div>
-  <div class="sub">${B.card<=0?"Paid off. Keep it at $0 by covering card purchases each period.":payoff?`At this pace it hits $0 with your ${md(DATES[payoff.i])} check.`:"Not paid off within the next year at this pace. Raise your savings % in Setup to speed it up."}</div></section>
+  let h=`<section class="hero" style="background:${B.card>0?"var(--c-card)":"var(--good)"}"><div class="lab">Credit card balance${info("cardbal")}</div><div class="big num">${bigMoney(B.card)}</div>
+  <div class="sub">${B.card<=0?"Paid off. Keep it at $0 by covering card purchases each period.":payoff?`At this pace it hits $0 with your ${md(DATES[payoff.i])} check.`:"Not paid off within the next year at this pace. Raise your savings % in Setup to speed it up."}</div>${helpBox("cardbal")}</section>
   <div class="row2"><button class="btn" data-act="setbal" data-k="card">Update card balance</button></div>`;
+  const bufOn=S.useBuffer!==false;
   const bp=S.bufferTarget?Math.min(100,B.buffer/S.bufferTarget*100):100;
-  h+=`<section class="card"><div class="stubhead"><h3>Buffer</h3><button class="linkbtn" data-act="setbal" data-k="buffer">Update</button></div>
+  if(bufOn)h+=`<section class="card"><div class="stubhead"><h3>Buffer${info("bufferbox")}</h3><button class="linkbtn" data-act="setbal" data-k="buffer">Update</button></div>${helpBox("bufferbox")}
    <div class="stubhead"><span class="amt num" style="font-size:24px">${fmt(B.buffer,true)}</span><span class="micr">TARGET ${fmt(S.bufferTarget)}</span></div>
    <div class="meter"><i style="width:${bp}%;background:var(--c-buffer)"></i></div>
    <p class="hint">${B.buffer>=S.bufferTarget?"Full. Surprise bills come out of here, not the card.":`Until this is full, ${S.order==="card"?"the card gets paid first, then the buffer fills.":"your savings money fills this first, then goes to the card."} You can change the order in Setup.`}</p></section>`;
-  h+=`<section class="card"><div class="stubhead"><h3>Savings</h3><button class="linkbtn" data-act="setbal" data-k="savings">Update</button></div><span class="amt num" style="font-family:var(--display);font-size:24px;font-weight:800">${fmt(B.savings,true)}</span></section>`;
-  const rows=[];for(const r of pr.rows){rows.push(r);if(r.after.card<=0&&r.after.buffer>=S.bufferTarget&&rows.length>=4)break;if(rows.length>=14)break;}
-  h+=`<section class="card"><h3>Payoff schedule</h3><p class="hint">Each paycheck from now, assuming your bills stay the same and you cover any new card purchases.</p>
-   <div class="tablewrap"><table class="num"><thead><tr><th>Check</th><th>Buffer</th><th>Card pmt</th><th>Card after</th><th>Savings</th></tr></thead><tbody>
-   ${rows.map(r=>`<tr class="${payoff&&r.i===payoff.i?"hit":""}"><td>${md(DATES[r.i])}${per(r.i).locked?" ✓":""}</td><td>${fmt(r.pl.buffer)}</td><td>${fmt(r.pl.card)}</td><td>${fmt(r.after.card)}</td><td>${fmt(r.pl.savings)}</td></tr>`).join("")}
+  h+=`<section class="card"><div class="stubhead"><h3>Savings${info("savingsbox")}</h3><button class="linkbtn" data-act="setbal" data-k="savings">Update</button></div>${helpBox("savingsbox")}<span class="amt num" style="font-family:var(--display);font-size:24px;font-weight:800">${fmt(B.savings,true)}</span></section>`;
+  const rows=[];for(const r of pr.rows){rows.push(r);if(r.after.card<=0&&r.after.buffer>=bufT()&&rows.length>=4)break;if(rows.length>=14)break;}
+  h+=`<section class="card"><h3>Payoff schedule${info("payoff")}</h3>${helpBox("payoff")}<p class="hint">Each paycheck from now, assuming your bills stay the same and you cover any new card purchases.</p>
+   <div class="tablewrap"><table class="num"><thead><tr><th>Check</th>${bufOn?"<th>Buffer</th>":""}<th>Card pmt</th><th>Card after</th><th>Savings</th></tr></thead><tbody>
+   ${rows.map(r=>`<tr class="${payoff&&r.i===payoff.i?"hit":""}"><td>${md(DATES[r.i])}${per(r.i).locked?" ✓":""}</td>${bufOn?`<td>${fmt(r.pl.buffer)}</td>`:""}<td>${fmt(r.pl.card)}</td><td>${fmt(r.after.card)}</td><td>${fmt(r.pl.savings)}</td></tr>`).join("")}
    </tbody></table></div></section>`;
   const log=B.log.slice(0,15);
-  h+=`<section class="card"><h3>Activity</h3>${log.length?`<div class="kv">${log.map(l=>`<div><span>${esc(l.note||l.kind)}<br><small class="micr">${new Date(l.t).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</small></span><b class="num">${l.amt>0?"+":""}${fmt(l.amt,true)}</b></div>`).join("")}</div>`:`<p class="empty">Card payments, purchases and balance updates show up here.</p>`}</section>`;
+  h+=`<section class="card"><h3>Activity${info("activity")}</h3>${helpBox("activity")}${log.length?`<div class="kv">${log.map(l=>`<div><span>${esc(l.note||l.kind)}<br><small class="micr">${new Date(l.t).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</small></span><b class="num">${l.amt>0?"+":""}${fmt(l.amt,true)}</b></div>`).join("")}</div>`:`<p class="empty">Card payments, purchases and balance updates show up here.</p>`}</section>`;
   return h;
 }
 
@@ -458,21 +512,21 @@ function vSetup(){
   const pr=projection(S.payDays.length+1);const cyc=pr.rows.slice(1,1+S.payDays.length);const mPay=sum(cyc.map(r=>r.pl.pay));
   const mB=sum(cyc.map(r=>r.pl.billsTotal)),mS=sum(cyc.map(r=>r.pl.save)),mF=sum(cyc.map(r=>Math.max(0,r.pl.fun)));
   const pc=v=>mPay?Math.round(v/mPay*100)+"%":"–";
-  let h=`<section class="card"><div class="stubhead"><h3>Paycheck</h3><button class="linkbtn" data-act="editpay">Edit</button></div>
+  let h=`<section class="card"><div class="stubhead"><h3>Paycheck${info("paycheck")}</h3><button class="linkbtn" data-act="editpay">Edit</button></div>${helpBox("paycheck")}
    <div class="kv"><div><span>Take-home per check</span><b class="num">${fmt(S.payAmount,true)}</b></div><div><span>Paydays</span><b>${S.payDays.map(dayLabel).join(" and ")}</b></div></div></section>
-  <section class="card"><div class="stubhead"><h3>Split</h3><button class="linkbtn" data-act="editsplit">Edit</button></div>
+  <section class="card"><div class="stubhead"><h3>Split${info("splitset")}</h3><button class="linkbtn" data-act="editsplit">Edit</button></div>${helpBox("splitset")}
    <div class="kv"><div><span>Bills target</span><b>${S.split.bills}%</b></div><div><span>Savings (buffer, card, then savings)</span><b>${S.split.savings}%</b></div><div><span>Free to spend target</span><b>${fn}%</b></div>
-   <div><span>Buffer target</span><b class="num">${fmt(S.bufferTarget)}</b></div><div><span>Order</span><b>${S.order==="card"?"Card, then buffer":"Buffer, then card"}</b></div>
+   <div><span>Emergency buffer</span><b class="num">${S.useBuffer!==false?fmt(S.bufferTarget)+" target":"Off"}</b></div>${S.useBuffer!==false?`<div><span>Order</span><b>${S.order==="card"?"Card, then buffer":"Buffer, then card"}</b></div>`:""}
    <div><span>Payoff mode</span><b>${S.payoffMode!==false?(payoffOn(B)?"On":"On (done)"):"Off"}</b></div>${S.payoffMode!==false?`<div><span>Keep free per check while paying off</span><b class="num">${fmt(S.keepFree||0)}</b></div>`:""}</div>
    ${mPay?`<p class="note">Over a full month your bills are ${pc(mB)} of pay, savings ${pc(mS)}, free ${pc(mF)}.</p>`:""}</section>
-  <section class="card"><div class="stubhead"><h3>Bills</h3><button class="linkbtn" data-act="editbill">Add bill</button></div>
+  <section class="card"><div class="stubhead"><h3>Bills${info("billsset")}</h3><button class="linkbtn" data-act="editbill">Add bill</button></div>${helpBox("billsset")}
    ${S.bills.length?`<div class="kv">${S.bills.slice().sort((a,b)=>(a.day==="each"?0:a.day)-(b.day==="each"?0:b.day)).map(b=>`<div><button style="text-align:left;flex:1" data-act="editbill" data-id="${b.id}"><b style="text-align:left">${esc(b.name)}</b>${b.variable?' <span class="tag debit">Varies</span>':""}<br><small style="color:var(--muted)">${b.day==="each"?"Comes out of every check":"Charges on the "+dayLabel(b.day)}</small></button><b class="num">${fmt(b.amount,true)}</b></div>`).join("")}
    <div><span>Monthly total</span><b class="num">${fmt(sum(S.bills.map(b=>b.day==="each"?b.amount*S.payDays.length:b.amount)),true)}</b></div></div>`:`<p class="empty">No bills yet. Add rent, utilities, loans and anything that charges on a set day.</p>`}
    <p class="hint">Each bill is paid from the paycheck that lands before its charge date. Split twice-a-month costs like groceries into two bills.</p></section>
   <section class="card"><h3>Color theme</h3>
    <div class="swatches">${ACCENTS.map(([k,n,l,d])=>`<button class="swatch" data-act="accent" data-v="${k}" aria-pressed="${look.accent===k}" style="--swl:${l};--swd:${d}"><i></i>${n}</button>`).join("")}</div>
    <div class="chips">${[["system","Match device"],["light","Light"],["dark","Dark"]].map(([k,n])=>`<button data-act="mode" data-v="${k}" aria-pressed="${look.mode===k}">${n}</button>`).join("")}</div></section>
-  <section class="card"><h3>Balances</h3><div class="kv"><div><span>Credit card</span><b class="num">${fmt(B.card,true)}</b></div><div><span>Buffer</span><b class="num">${fmt(B.buffer,true)}</b></div><div><span>Savings</span><b class="num">${fmt(B.savings,true)}</b></div></div>
+  <section class="card"><h3>Balances${info("balances")}</h3>${helpBox("balances")}<div class="kv"><div><span>Credit card</span><b class="num">${fmt(B.card,true)}</b></div><div><span>Buffer</span><b class="num">${fmt(B.buffer,true)}</b></div><div><span>Savings</span><b class="num">${fmt(B.savings,true)}</b></div></div>
    <div class="row2"><button class="btn ghost sm" data-act="setbal" data-k="card">Card</button><button class="btn ghost sm" data-act="setbal" data-k="buffer">Buffer</button><button class="btn ghost sm" data-act="setbal" data-k="savings">Savings</button></div></section>`;
   return h;
 }
@@ -562,12 +616,14 @@ function sheetSplit(){
   <form><div class="field"><label for="bills">Bills target <span id="bv">${S.split.bills}%</span></label><input type="range" id="bills" name="bills" min="30" max="80" step="5" value="${S.split.bills}"><p class="hint">A yardstick only. It flags checks where bills run over.</p></div>
   <div class="field"><label for="savings">Savings <span id="sv">${S.split.savings}%</span></label><input type="range" id="savings" name="savings" min="0" max="50" step="1" value="${S.split.savings}"></div>
   <p class="note" id="fv"></p>
+  <label style="display:flex;gap:10px;align-items:flex-start;font-size:14px"><input type="checkbox" name="usebuf" id="usebuf" style="width:auto;margin-top:3px" ${S.useBuffer!==false?"checked":""}><span><b>Keep an emergency buffer</b><br><span style="color:var(--muted)">A cash cushion for surprises, filled before extra card payments. Turn off to send that money straight to the card.</span></span></label>
+  <div id="bufopts" style="display:flex;flex-direction:column;gap:14px" ${S.useBuffer!==false?"":"hidden"}>
   ${money("target","Buffer target",S.bufferTarget)}
-  <div class="field"><span class="flabel">Order</span><div class="chips" id="ord"><button type="button" data-o="buffer" aria-pressed="${S.order!=="card"}">Buffer first, then card</button><button type="button" data-o="card" aria-pressed="${S.order==="card"}">Card first, then buffer</button></div></div>
+  <div class="field"><span class="flabel">Order</span><div class="chips" id="ord"><button type="button" data-o="buffer" aria-pressed="${S.order!=="card"}">Buffer first, then card</button><button type="button" data-o="card" aria-pressed="${S.order==="card"}">Card first, then buffer</button></div></div></div>
   <label style="display:flex;gap:10px;align-items:flex-start;font-size:14px"><input type="checkbox" name="payoff" style="width:auto;margin-top:3px" ${S.payoffMode!==false?"checked":""}><span><b>Payoff mode</b><br><span style="color:var(--muted)">Until the buffer is full and the card is at $0, everything left after bills goes to them instead of the savings %.</span></span></label>
   ${money("keep","Keep free per check while paying off",S.keepFree||0)}
-  ${actions("Save")}</form>`,fd=>{S.split={bills:+fd.get("bills"),savings:+fd.get("savings")};S.bufferTarget=num(fd.get("target"));S.order=order;S.payoffMode=!!fd.get("payoff");S.keepFree=num(fd.get("keep"));saveSettings();closeSheet();render();toast("Split saved");});
-  let order=S.order;const f=$("#sheetroot form");
+  ${actions("Save")}</form>`,fd=>{S.split={bills:+fd.get("bills"),savings:+fd.get("savings")};S.bufferTarget=num(fd.get("target"));S.order=order;S.useBuffer=!!fd.get("usebuf");S.payoffMode=!!fd.get("payoff");S.keepFree=num(fd.get("keep"));saveSettings();closeSheet();render();toast("Split saved");});
+  let order=S.order;const f=$("#sheetroot form");f.usebuf.addEventListener("change",()=>{$("#bufopts").hidden=!f.usebuf.checked;});
   const u=()=>{$("#bv").textContent=f.bills.value+"%";$("#sv").textContent=f.savings.value+"%";const fr=100-f.bills.value-f.savings.value;$("#fv").textContent=`Free to spend target: ${Math.max(0,fr)}%`+(fr<0?". Bills and savings add up to more than 100%.":"");};
   f.bills.addEventListener("input",u);f.savings.addEventListener("input",u);u();
   $("#ord").addEventListener("click",e=>{const b=e.target.closest("[data-o]");if(!b)return;order=b.dataset.o;$("#ord").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));});
@@ -587,6 +643,17 @@ function sheetBill(id){
   act=>{if(act==="del"){S.bills=S.bills.filter(x=>x.id!==id);saveSettings();closeSheet();render();toast("Bill deleted");}});
 }
 
+function sheetGuide(){
+  openSheet(`<h3>How this app works</h3><div class="guide">
+   <h4>The idea</h4><p>Every paycheck has a job. It covers the bills that charge before your next payday, then the rest goes to your goals in order: your buffer, your credit card, then savings. Whatever is left is free to spend, guilt-free.</p>
+   <h4>Paycheck tab</h4><p>Shows one paycheck at a time; use the arrows to look back or ahead. The colored bar shows where every dollar goes. When the money lands, tap <b>My paycheck landed</b>, make each transfer in your bank app, then tick it off. Ticking updates the balances in this app, it never moves real money.</p>
+   <h4>Buffer</h4><p>Emergency cash kept in a separate savings account, so a surprise bill never ends up on the credit card. It fills to your target first. Don't want one? Turn it off in Setup, under Split, and that money goes straight to the card.</p>
+   <h4>Payoff mode</h4><p>While the buffer is filling or the card has a balance, everything left after bills goes to them (minus any "keep free" amount you set). Once both are done, your normal savings % takes over.</p>
+   <h4>Spending tab</h4><p>Log anything that isn't a bill. Mark it debit or credit card. Card purchases get added to your card balance, and the app reminds you to send that cash to the card.</p>
+   <h4>Card tab</h4><p>Your card balance, buffer and savings, plus a forecast of when the card hits $0. If a number drifts from your bank or card app, tap Update and type the real one.</p>
+   <h4>Setup tab</h4><p>Your paycheck, paydays, bills, split percentages, buffer target and color theme. Change anything and the plan recalculates right away.</p>
+  </div><div class="row2" style="margin-top:16px"><button type="button" class="btn" data-sact="close">Got it</button></div>`);
+}
 // ---------- actions ----------
 function toggleMove(k){
   const i=ui.idx;const p=per(i);if(!p.locked)return;const pl=plan(i,B);const mv={...(p.moves||{})};const amt=pl[k];const on=!mv[k];mv[k]=on;const sg=on?1:-1;
@@ -600,7 +667,7 @@ document.addEventListener("click",e=>{
   if(sc){if(e.target.id==="scrim"){closeSheet();return;}const sa=e.target.closest("[data-sact]");if(sa){if(sa.dataset.sact==="close")closeSheet();else if(sheet&&sheet.onClick)sheet.onClick(sa.dataset.sact);}return;}
   const tb=e.target.closest("[data-tab]");if(tb){ui.tab=tb.dataset.tab;try{history.replaceState(null,"","#"+ui.tab);}catch(_){}window.scrollTo(0,0);render();return;}
   const a=e.target.closest("[data-act]");if(!a||a.disabled)return;
-  if(readOnly&&!["prev","next"].includes(a.dataset.act)){toast("You can view this budget but not change it.");return;}
+  if(readOnly&&!["prev","next","help","guide","introok","accent","mode"].includes(a.dataset.act)){toast("You can view this budget but not change it.");return;}
   const act=a.dataset.act;
   if(act==="prev"){ui.idx=Math.max(0,ui.idx-1);render();}
   else if(act==="next"){ui.idx=Math.min(DATES.length-2,ui.idx+1);render();}
@@ -613,6 +680,9 @@ document.addEventListener("click",e=>{
   else if(act==="edittx")sheetTx(a.dataset.id);
   else if(act==="cover"){const i=ui.idx,amt=num(a.dataset.amt);B.card=r2(Math.max(0,B.card-amt));logBal("payment",-amt,"Covered card purchases");P[pid(i)]={...per(i),coverPaid:r2((per(i).coverPaid||0)+amt)};savePer(i);saveBal();render();toast(`Logged ${fmt(amt,true)} card payment`);}
   else if(act==="setbal")sheetBal(a.dataset.k);
+  else if(act==="help"){const k=a.dataset.k;openHelp.has(k)?openHelp.delete(k):openHelp.add(k);render();}
+  else if(act==="introok"){introDone=true;try{localStorage.setItem(INTRO,"1");}catch(_){}render();}
+  else if(act==="guide")sheetGuide();
   else if(act==="accent")setLook({accent:a.dataset.v});
   else if(act==="mode")setLook({mode:a.dataset.v});
   else if(act==="editpay")sheetPay();

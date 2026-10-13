@@ -8,7 +8,8 @@ A single-page app that tells you what to do with each paycheck.
 - **Payoff mode.** Until the buffer hits its target and the card is at $0, everything left after bills goes to the buffer first, then the card (minus an optional "keep free" amount). After that, the savings % split takes over.
 - **Spending.** Log purchases as debit or credit card. Card purchases add to the card balance, and the app prompts you to send that money to the card.
 - **Card.** Update the balance anytime, see buffer progress, and a check-by-check payoff schedule.
-- **Setup.** Paycheck amount and paydays, split percentages, buffer target, order (buffer or card first), bills, and color theme.
+- **Setup.** Paycheck amount and paydays, split percentages, buffer on/off and target, order (buffer or card first), bills, and color theme.
+- **Built-in help.** Tap any **?** for a plain-language explanation of that section. A short intro shows on first visit, and the **?** in the header opens the full guide.
 
 ## Running it
 
