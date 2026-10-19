@@ -10,6 +10,8 @@
   --accent:#1d5c47; --accent-ink:#ffffff;
   --c-bills:#56646e; --c-buffer:#b8841a; --c-card:#c2463a; --c-save:#2d8a5d; --c-free:#3a6db3;
   --warn:#a8650e; --bad:#b83a2e; --good:#25784f;
+  /* spending categories: fixed slots, validated for colorblind separation on each surface */
+  --k1:#2a78d6; --k2:#eb6834; --k3:#1baf7a; --k4:#eda100; --k5:#e87ba4; --k6:#008300; --k7:#6250d6; --k8:#e34948; --k0:#97a09b;
   --display:"Bricolage Grotesque", "Avenir Next", ui-sans-serif, system-ui, sans-serif;
   --body:"Public Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono:"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
@@ -20,12 +22,14 @@
   --accent:#72c9a3; --accent-ink:#0b1310;
   --c-bills:#a2b2bd; --c-buffer:#e2b14e; --c-card:#ee7a6a; --c-save:#66c592; --c-free:#7ea8e6;
   --warn:#e4a64a; --bad:#ef7b6b; --good:#66c592; color-scheme:dark;
+  --k1:#3987e5; --k2:#d95926; --k3:#199e70; --k4:#c98500; --k5:#d55181; --k6:#008300; --k7:#9085e9; --k8:#e66767; --k0:#5f6b66;
 }}
 :root[data-theme="dark"]{
   --bg:#0e1412; --surface:#161e1b; --sunk:#1d2723; --ink:#e5ebe6; --muted:#93a29b; --line:#27322d;
   --accent:#72c9a3; --accent-ink:#0b1310;
   --c-bills:#a2b2bd; --c-buffer:#e2b14e; --c-card:#ee7a6a; --c-save:#66c592; --c-free:#7ea8e6;
   --warn:#e4a64a; --bad:#ef7b6b; --good:#66c592; color-scheme:dark;
+  --k1:#3987e5; --k2:#d95926; --k3:#199e70; --k4:#c98500; --k5:#d55181; --k6:#008300; --k7:#9085e9; --k8:#e66767; --k0:#5f6b66;
 }
 /* Color themes: each swaps the accent (hero, buttons, active states) with its own light and dark value. */
 :root[data-accent="ocean"]{--accent:#1f4f8a}
@@ -196,7 +200,16 @@ header.top .in{max-width:520px;margin:0 auto;display:flex;flex-direction:column;
 .hist .bar i{display:block;height:100%;background:var(--c-free);border-radius:5px}
 .hist .cur{font-weight:700;color:var(--ink)}
 .hist span{color:var(--muted)}
-.tag.cat{color:var(--accent)}
+.tag.cat{color:var(--muted);border:0;padding:0;margin-left:8px;display:inline-flex;align-items:center;gap:5px;font-size:11px}
+.dot{width:9px;height:9px;border-radius:3px;display:inline-block;flex:none;background:var(--c)}
+.catr .top b{display:flex;align-items:center;gap:8px}
+.catstrip{display:flex;height:16px;border-radius:8px;overflow:hidden;gap:2px;background:var(--sunk)}
+.catstrip i{display:block;height:100%;min-width:3px;background:var(--c)}
+.chips button .dot{margin-right:7px;vertical-align:0}
+.chips button[aria-pressed="true"] .dot{box-shadow:0 0 0 2px var(--accent-ink)}
+.colorpick{display:grid;grid-template-columns:repeat(9,1fr);gap:6px}
+.colorpick button{aspect-ratio:1;max-width:100%;border-radius:10px;background:var(--c);border:2px solid var(--surface);box-shadow:0 0 0 1px var(--line)}
+.colorpick button[aria-pressed="true"]{box-shadow:0 0 0 2px var(--ink)}
 .filebtn{display:flex;flex-direction:column;gap:6px}
 .tablewrap{overflow-x:auto;margin-inline:-4px}
 table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:340px}
@@ -294,11 +307,11 @@ const HELP={
   mode:"Pick how the app plans each paycheck. <b>General budget</b> splits it into bills, savings and spending and leaves the credit card out of it. <b>Card payoff</b> sends everything after bills to an optional emergency buffer, then the card, until it's paid off, then switches to your normal split. Switch any time; nothing is lost.",
   modegen:"You're in General budget mode. Each check pays its bills, puts your savings % aside, and the rest is free to spend. The credit card isn't part of the plan. Switch to Card payoff in Setup if you want to focus on paying down a card.",
   modepay:"You're in Card payoff mode. Everything left after bills goes to your buffer and card until both are done. The bars show how far along you are, and the dates are when each should be done if your bills stay the same.",
-  breakdown:"Where your non-bill spending went, by category, biggest first. Switch between this pay period and the whole month. If a category has a limit, the bar turns amber when you're close and red when you're over. The arrows show the change from the previous period or month.",
+  breakdown:"Where your non-bill spending went, by category, biggest first. The striped bar at the top shows each category's share, in its color. Switch between this pay period and the whole month. If a category has a limit, you'll see ● when you're close and ⚠ when you're over. The arrows show the change from the previous period or month. Change a category's color in Setup.",
   history:"Your total non-bill spending for each of the last six pay periods or months, so you can spot trends. The current one is in bold.",
   income:()=>"Money outside your regular paychecks, like a bonus, side job or refund. Choose what it's for: <b>Spend it</b> adds it to this period's free money, <b>Save it</b> adds it to your savings balance"+(isPayoff()?", and <b>Pay the card</b> lowers your card balance.":"."),
   goals:"Things you're saving for, like a vacation or an emergency fund. Goals are slices of your savings. Add money from savings you already have, or new money, which also raises your savings balance.",
-  catsset:"The categories you pick from when you log spending. Tap one to rename it or set a limit per pay period. Deleting a category keeps its purchases; they show as Uncategorized.",
+  catsset:"The categories you pick from when you log spending. Tap one to rename it, change its color, or set a limit per pay period. Deleting a category keeps its purchases; they show as Uncategorized.",
   data:()=>"<b>Export spending</b> downloads your purchases and extra income as a CSV that opens in Excel or Google Sheets. <b>Back up</b> saves everything to a file you can restore later. "+(mode==="db"?"This copy saves to your Claude account.":"This copy saves on this device only, so back up now and then, especially before switching phones."),
   billsset:"Your recurring bills and the day each one charges. Each bill is paid from the paycheck that lands before its charge date. Twice-a-month costs, like groceries, work best as two bills.",
   balances:()=>isPayoff()?"The current amounts in your credit card, buffer and savings. Set these to match your bank and card apps whenever they drift.":"Your current savings balance. Set it to match your bank whenever it drifts."
@@ -311,6 +324,10 @@ let introDone=false;try{introDone=localStorage.getItem(INTRO)==="1";}catch(e){}
 
 // ---------- state ----------
 const DEFAULT_CATS=()=>[["dining","Dining out"],["groc","Groceries (extra)"],["gas","Gas & transport"],["shop","Shopping"],["fun","Entertainment"],["subs","Subscriptions"],["care","Personal care"],["home","Household"],["gifts","Gifts"],["other","Other"]].map(([id,name])=>({id,name,limit:0}));
+const CAT_SLOT={dining:1,subs:2,groc:3,gas:4,fun:5,home:6,shop:7,care:8,gifts:0,other:0};
+function nextSlot(cats){const used=new Set(cats.map(c=>c.color).filter(v=>Number.isInteger(v)&&v>0));for(let k=1;k<=8;k++)if(!used.has(k))return k;return 0;}
+const catColor=id=>{const c=S.cats.find(c=>c.id===id);return `var(--k${c&&Number.isInteger(c.color)?c.color:0})`;};
+const dot=id=>`<i class="dot" style="--c:${catColor(id)}" aria-hidden="true"></i>`;
 const PRESETS=[[50,20,"50/30/20"],[60,20,"60/20/20"],[70,10,"70/20/10"]];
 const BASE_SETTINGS={budgetMode:"general",payAmount:0,payDays:[15,31],split:{bills:50,savings:20},bufferTarget:1000,useBuffer:true,order:"buffer",keepFree:0,bills:[],cats:null,goals:[]};
 // ---------- look (color theme + light/dark) ----------
@@ -337,7 +354,9 @@ function normSettings(o){const raw=o||{};const s={...clone(BASE_SETTINGS),...clo
   // Older saves had a payoff on/off flag instead of a mode.
   if(raw.budgetMode!=="general"&&raw.budgetMode!=="payoff")s.budgetMode=(raw.payAmount&&raw.payoffMode!==false)?"payoff":"general";
   delete s.payoffMode;
-  s.cats=(Array.isArray(raw.cats)&&raw.cats.length?raw.cats:DEFAULT_CATS()).map(c=>({id:String(c.id||uid()),name:String(c.name||"Category"),limit:Math.max(0,+c.limit||0)}));
+  s.cats=(Array.isArray(raw.cats)&&raw.cats.length?raw.cats:DEFAULT_CATS()).map(c=>({id:String(c.id||uid()),name:String(c.name||"Category"),limit:Math.max(0,+c.limit||0),color:c.color}));
+  // Give each category a color slot: presets have fixed ones; others take the next free slot, then neutral.
+  s.cats.forEach(c=>{if(Number.isInteger(c.color)&&c.color>=0&&c.color<=8)return;c.color=CAT_SLOT[c.id]!=null?CAT_SLOT[c.id]:nextSlot(s.cats);});
   s.goals=(Array.isArray(raw.goals)?raw.goals:[]).map(g=>({id:String(g.id||uid()),name:String(g.name||"Goal"),target:Math.max(0,+g.target||0)}));
   s.split={...BASE_SETTINGS.split,...(s.split||{})};s.bills=(s.bills||[]).map(b=>({id:b.id||uid(),name:b.name||"Bill",amount:+b.amount||0,day:b.day==="each"?"each":Math.min(31,Math.max(1,+b.day||1)),variable:!!b.variable}));s.payDays=(s.payDays&&s.payDays.length?s.payDays:[15,31]).map(Number).sort((a,b)=>a-b);return s;}
 function normBal(o){const b={buffer:0,card:0,savings:0,log:[],...clone(o||{})};b.buffer=r2(b.buffer);b.card=r2(b.card);b.savings=r2(b.savings);b.log=Array.isArray(b.log)?b.log:[];b.goals=b.goals&&typeof b.goals==="object"&&!Array.isArray(b.goals)?b.goals:{};b.cardStart=r2(b.cardStart!=null?b.cardStart:b.card);return b;}
@@ -566,13 +585,14 @@ function breakdown(i){
   const rows=keys.map(k=>{
     const c=S.cats.find(c=>c.id===k);const amt=a[k]||0;const lim=c&&c.limit?r2(c.limit*mult):0;const pct=lim?amt/lim*100:amt/maxAmt*100;
     const st=lim?(amt>lim?["st-over",`Over by ${fmt(r2(amt-lim))}`]:pct>=80?["st-close",`${fmt(r2(lim-amt))} left of ${fmt(lim)}`]:["",`${fmt(r2(lim-amt))} left of ${fmt(lim)}`]):["",""];
-    const color=lim&&amt>lim?"--bad":lim&&pct>=80?"--warn":"--c-free";
-    return `<div class="catr"><div class="top"><b>${esc(catName(k))}</b><span class="num">${fmt(amt,true)}</span></div><div class="meter"><i style="width:${Math.min(100,pct)}%;background:var(${color})"></i></div><small><span class="${st[0]}">${st[1]}</span><span>${delta(r2(amt-(b[k]||0)),prev.length>0)}</span></small></div>`;}).join("");
+    const flag=st[0]==="st-over"?"⚠ ":st[0]==="st-close"?"● ":"";
+    return `<div class="catr"><div class="top"><b>${dot(k)}${esc(catName(k))}</b><span class="num">${fmt(amt,true)}${total>0&&amt>0?` <span style="color:var(--muted);font-weight:500">${Math.round(amt/total*100)}%</span>`:""}</span></div><div class="meter"><i style="width:${Math.min(100,pct)}%;background:${catColor(k)}"></i></div><small><span class="${st[0]}">${flag}${st[1]}</span><span>${delta(r2(amt-(b[k]||0)),prev.length>0)}</span></small></div>`;}).join("");
+  const strip=total>0?`<div class="catstrip" role="img" aria-label="Share of spending by category">${keys.filter(k=>(a[k]||0)>0).map(k=>`<i style="width:${a[k]/total*100}%;--c:${catColor(k)}" title="${esc(catName(k))}: ${fmt(a[k],true)} (${Math.round(a[k]/total*100)}%)"></i>`).join("")}</div>`:"";
   const maxH=Math.max(1,...hist.map(r=>r.total));
   return `<section class="card"><h3>Where it went${info("breakdown")}</h3>${helpBox("breakdown")}
    <div class="seg" role="group" aria-label="Show spending for"><button data-act="sview" data-v="period" aria-pressed="${!monthly}">Pay period</button><button data-act="sview" data-v="month" aria-pressed="${monthly}">Month</button></div>
    <p class="hint" style="margin:0">Spent ${label}: <b class="num" style="color:var(--ink)">${fmt(total,true)}</b>${prev.length?` · ${delta(r2(total-ptotal),true)}`:""}</p>
-   ${rows?`<div class="brk">${rows}</div>`:`<p class="empty">Nothing logged ${label} yet.</p>`}
+   ${strip}${rows?`<div class="brk">${rows}</div>`:`<p class="empty">Nothing logged ${label} yet.</p>`}
    ${monthly&&S.cats.some(c=>c.limit)?`<p class="hint">Limits are set per pay period, so the month view uses ${mult}× each limit.</p>`:""}
    <p class="eyebrow" style="margin-top:6px">Last 6 ${monthly?"months":"pay periods"}${info("history")}</p>${helpBox("history")}
    <div class="hist">${hist.map(r=>`<span class="${r.cur?"cur":""}">${r.label}</span><div class="bar"><i style="width:${r.total/maxH*100}%"></i></div><span class="num ${r.cur?"cur":""}">${fmt(r.total)}</span>`).join("")}</div>
@@ -596,7 +616,7 @@ function vSpend(){
   else{
     let wk="";tx.forEach(t=>{const d=fromIso(t.date);const ws=new Date(d);ws.setDate(d.getDate()-d.getDay());const k=iso(ws);
       if(k!==wk){wk=k;const wsum=sum(tx.filter(x=>{const xd=fromIso(x.date);const xs=new Date(xd);xs.setDate(xd.getDate()-xd.getDay());return iso(xs)===k;}).map(x=>x.amount));h+=`<div class="wk"><span>Week of ${md(ws)}</span><span class="num">${fmt(wsum,true)}</span></div>`;}
-      h+=`<button class="tx" data-act="edittx" data-id="${t.id}"><span><b>${esc(t.note||catName(t.cat))}</b><small>${dmd(d)}${t.note?`<span class="tag cat">${esc(catName(t.cat))}</span>`:""}${pay&&t.method==="card"?'<span class="tag card">Card</span>':""}</small></span><span class="num" style="font-weight:700">${fmt(t.amount,true)}</span></button>`;});
+      h+=`<button class="tx" data-act="edittx" data-id="${t.id}"><span><b style="display:flex;align-items:center;gap:8px">${dot(catKey(t))}${esc(t.note||catName(t.cat))}</b><small>${dmd(d)}${t.note?`<span class="tag cat">${esc(catName(t.cat))}</span>`:""}${pay&&t.method==="card"?'<span class="tag card">Card</span>':""}</small></span><span class="num" style="font-weight:700">${fmt(t.amount,true)}</span></button>`;});
   }
   return h+`</section>`;
 }
@@ -660,7 +680,7 @@ function vSetup(){
    <div><span>Monthly total</span><b class="num">${fmt(sum(S.bills.map(b=>b.day==="each"?b.amount*S.payDays.length:b.amount)),true)}</b></div></div>`:`<p class="empty">No bills yet. Add rent, utilities, loans and anything that charges on a set day.</p>`}
    <p class="hint">Each bill is paid from the paycheck that lands before its charge date. Split twice-a-month costs like groceries into two bills.</p></section>
   <section class="card"><div class="stubhead"><h3>Spending categories${info("catsset")}</h3><button class="linkbtn" data-act="editcat">Add</button></div>${helpBox("catsset")}
-   <div class="kv">${S.cats.map(c=>`<div><button style="text-align:left;flex:1" data-act="editcat" data-id="${c.id}"><b style="text-align:left">${esc(c.name)}</b></button><span>${c.limit?`<b class="num" style="color:var(--ink)">${fmt(c.limit)}</b> limit`:"No limit"}</span></div>`).join("")}</div></section>
+   <div class="kv">${S.cats.map(c=>`<div><button style="text-align:left;flex:1;display:flex;align-items:center;gap:8px" data-act="editcat" data-id="${c.id}">${dot(c.id)}<b style="text-align:left">${esc(c.name)}</b></button><span>${c.limit?`<b class="num" style="color:var(--ink)">${fmt(c.limit)}</b> limit`:"No limit"}</span></div>`).join("")}</div></section>
   <section class="card"><h3>Color theme</h3>
    <div class="swatches">${ACCENTS.map(([k,n,l,d])=>`<button class="swatch" data-act="accent" data-v="${k}" aria-pressed="${look.accent===k}" style="--swl:${l};--swd:${d}"><i></i>${n}</button>`).join("")}</div>
    <div class="chips">${[["system","Match device"],["light","Light"],["dark","Dark"]].map(([k,n])=>`<button data-act="mode" data-v="${k}" aria-pressed="${look.mode===k}">${n}</button>`).join("")}</div></section>
@@ -719,7 +739,7 @@ function sheetTx(id){
   const t=found||{amount:"",note:"",method:"debit",date:iso(new Date()),cat:""};let method=pay?t.method:"debit";let cat=S.cats.some(c=>c.id===t.cat)?t.cat:"";
   openSheet(`<h3>${found?"Edit spending":"Add spending"}</h3><p class="hint">Anything outside your bills.${pay?" Card purchases also get added to your card balance.":""}</p>
   <form>${money("amount","Amount",t.amount===""?null:t.amount,true)}
-   <div class="field"><span class="flabel">Category</span><div class="chips" id="cats">${S.cats.map(c=>`<button type="button" data-c="${c.id}" aria-pressed="${c.id===cat}">${esc(c.name)}</button>`).join("")}<button type="button" data-c="_new" aria-pressed="false">+ New</button></div>
+   <div class="field"><span class="flabel">Category</span><div class="chips" id="cats">${S.cats.map(c=>`<button type="button" data-c="${c.id}" aria-pressed="${c.id===cat}">${dot(c.id)}${esc(c.name)}</button>`).join("")}<button type="button" data-c="_new" aria-pressed="false">+ New</button></div>
     <input id="newcat" name="newcat" placeholder="New category name, like Coffee" autocomplete="off" hidden maxlength="40"></div>
    <div class="field"><label for="note">What for <span style="text-transform:none;letter-spacing:0;font-weight:500">(optional)</span></label><input id="note" name="note" value="${esc(t.note)}" placeholder="Dinner, gas, Target run" autocomplete="off"></div>
    ${pay?`<div class="field"><span class="flabel">Paid with</span><div class="chips" id="meth"><button type="button" data-m="debit" aria-pressed="${method!=="card"}">Debit or cash</button><button type="button" data-m="card" aria-pressed="${method==="card"}">Credit card</button></div></div>`:""}
@@ -729,7 +749,7 @@ function sheetTx(id){
     const amount=num(fd.get("amount"));const date=fd.get("date")||iso(new Date());const err=m=>{const e=$("#err");e.textContent=m;e.hidden=false;};
     if(amount<=0)return err("Enter an amount above $0.");
     if(cat==="_new"){const nm=String(fd.get("newcat")||"").trim();if(!nm)return err("Type a name for the new category.");
-      const ex=S.cats.find(c=>c.name.toLowerCase()===nm.toLowerCase());if(ex)cat=ex.id;else{const nc={id:uid(),name:nm,limit:0};S.cats=[...S.cats,nc];cat=nc.id;saveSettings();}}
+      const ex=S.cats.find(c=>c.name.toLowerCase()===nm.toLowerCase());if(ex)cat=ex.id;else{const nc={id:uid(),name:nm,limit:0,color:nextSlot(S.cats)};S.cats=[...S.cats,nc];cat=nc.id;saveSettings();}}
     if(!cat)cat=S.cats.some(c=>c.id==="other")?"other":(S.cats[0]||{}).id||"";
     if(found)removeTx(fi,found);
     const ti=idxForDate(fromIso(date));const nt={id:found?found.id:uid(),t:Date.now(),amount,note:String(fd.get("note")||"").trim(),method,date,cat};
@@ -787,15 +807,19 @@ function sheetPayoff(){
   $("#ord").addEventListener("click",e=>{const b=e.target.closest("[data-o]");if(!b)return;order=b.dataset.o;$("#ord").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));});
 }
 function sheetCat(id){
-  const c=id?S.cats.find(x=>x.id===id):{name:"",limit:0};if(!c)return;
+  const c=id?S.cats.find(x=>x.id===id):{name:"",limit:0,color:nextSlot(S.cats)};if(!c)return;let color=Number.isInteger(c.color)?c.color:0;
   openSheet(`<h3>${id?"Edit category":"Add category"}</h3><form>
    <div class="field"><label for="name">Name</label><input id="name" name="name" value="${esc(c.name)}" placeholder="Coffee" autocomplete="off" maxlength="40"></div>
+   <div class="field"><span class="flabel">Color</span><div class="colorpick" id="cpick">${[1,2,3,4,5,6,7,8,0].map(k=>`<button type="button" data-k="${k}" style="--c:var(--k${k})" aria-pressed="${k===color}" aria-label="${["Gray","Blue","Orange","Aqua","Yellow","Pink","Green","Violet","Red"][k]}"></button>`).join("")}</div>
+    <p class="hint">${(()=>{const o=S.cats.filter(x=>x.id!==id&&x.color===color&&color>0);return o.length?`Also used by ${o.map(x=>esc(x.name)).join(", ")}.`:"Each category's color shows in your spending breakdown.";})()}</p></div>
    ${money("limit","Limit per pay period (optional)",c.limit||null)}<p class="hint" style="margin-top:-8px">Leave empty for no limit. You'll see a warning near and over it.</p>
    <p class="err" id="err" hidden style="color:var(--bad);margin:0;font-size:13px"></p>
    ${actions(id?"Save":"Add",id?"Delete":null)}</form>`,fd=>{
     const name=String(fd.get("name")||"").trim();if(!name){const e=$("#err");e.textContent="Give the category a name.";e.hidden=false;return;}
-    const nc={id:id||uid(),name,limit:num(fd.get("limit"))};S.cats=id?S.cats.map(x=>x.id===id?nc:x):[...S.cats,nc];saveSettings();closeSheet();render();toast(id?"Saved":"Category added");},
+    const nc={id:id||uid(),name,limit:num(fd.get("limit")),color};S.cats=id?S.cats.map(x=>x.id===id?nc:x):[...S.cats,nc];saveSettings();closeSheet();render();toast(id?"Saved":"Category added");},
   act=>{if(act==="del"){S.cats=S.cats.filter(x=>x.id!==id);saveSettings();closeSheet();render();toast("Category deleted. Its purchases show as Uncategorized.");}});
+  $("#cpick").addEventListener("click",e=>{const b=e.target.closest("[data-k]");if(!b)return;color=+b.dataset.k;$("#cpick").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));
+    const o=S.cats.filter(x=>x.id!==id&&x.color===color&&color>0);b.closest(".field").querySelector(".hint").textContent=o.length?`Also used by ${o.map(x=>x.name).join(", ")}.`:"Each category's color shows in your spending breakdown.";});
 }
 function sheetGoal(id){
   const g=id?S.goals.find(x=>x.id===id):{name:"",target:""};if(!g)return;
