@@ -173,6 +173,31 @@ header.top .in{max-width:520px;margin:0 auto;display:flex;flex-direction:column;
 .intro ol li::marker{font-family:var(--mono);color:var(--muted)}
 .guide h4{font-family:var(--display);font-size:16px;margin:14px 0 4px}
 .guide p{margin:0 0 6px;font-size:14px;line-height:1.55}
+/* mode picker, segmented control, category breakdown, history bars */
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modeopt{text-align:left;border:1.5px solid var(--line);border-radius:14px;padding:12px;background:var(--surface);display:flex;flex-direction:column;gap:4px;min-width:0}
+.modeopt b{font-family:var(--display);font-size:16px;font-weight:700}
+.modeopt small{color:var(--muted);font-size:12.5px;line-height:1.4}
+.modeopt[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
+@media (max-width:380px){.modes{grid-template-columns:1fr}}
+.seg{display:flex;background:var(--sunk);border-radius:10px;padding:3px;gap:3px}
+.seg button{flex:1;border-radius:8px;padding:7px;font-weight:600;font-size:13.5px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.brk{display:flex;flex-direction:column;gap:14px}
+.catr{display:flex;flex-direction:column;gap:5px;min-width:0}
+.catr .top{display:flex;justify-content:space-between;gap:10px;align-items:baseline;font-size:14.5px}
+.catr .top b{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.catr .top .num{font-weight:700;white-space:nowrap}
+.catr small{font-size:12.5px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.up{color:var(--bad);font-weight:600}.down{color:var(--good);font-weight:600}
+.st-over{color:var(--bad);font-weight:700}.st-close{color:var(--warn);font-weight:700}
+.hist{display:grid;grid-template-columns:auto 1fr auto;gap:7px 10px;align-items:center;font-size:13px}
+.hist .bar{height:8px;border-radius:5px;background:var(--sunk);overflow:hidden}
+.hist .bar i{display:block;height:100%;background:var(--c-free);border-radius:5px}
+.hist .cur{font-weight:700;color:var(--ink)}
+.hist span{color:var(--muted)}
+.tag.cat{color:var(--accent)}
+.filebtn{display:flex;flex-direction:column;gap:6px}
 .tablewrap{overflow-x:auto;margin-inline:-4px}
 table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:340px}
 th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700;text-align:right;padding:6px 4px;border-bottom:1px solid var(--line)}
@@ -249,33 +274,45 @@ const HELP={
   free:"Money from this paycheck that isn't spoken for. It's what's left after bills, your buffer, the card and savings, minus anything you've logged in Spending. The per-day number spreads it evenly over the days until your next payday.",
   planned:"What this future check should leave you to spend, based on your bills and where your buffer and card balance will be by then. It updates as things change.",
   cover:"When you buy something with the credit card using your free money, the cash for it is still sitting in checking. Sending that amount to the card right away keeps the balance from creeping back up.",
-  split:"Where every dollar of this paycheck goes. <b>Bills</b> are the ones that charge before your next payday. <b>Buffer</b> is emergency cash. <b>Card</b> is your credit card payment. <b>Savings</b> is long-term money. <b>Free</b> is yours to spend. The % under each is its share of this check.",
+  split:()=>"Where every dollar of this paycheck goes. <b>Bills</b> are the ones that charge before your next payday. "+(isPayoff()?(S.useBuffer!==false?"<b>Buffer</b> is emergency cash. ":"")+"<b>Card</b> is your credit card payment. ":"")+"<b>Savings</b> is long-term money. <b>Free</b> is yours to spend. The % under each is its share of this check.",
   steps:"Your to-do list for this paycheck. When the money hits your account, tap <b>My paycheck landed</b> to confirm the amount. Then make each move in your bank app and tick it here. Ticking updates your buffer, card and savings balances in this app; it doesn't move real money.",
   bills:"Every bill that charges between this payday and the next. Leave this much in checking. Tick each one when it actually charges. Tap an amount to change it for this month only, for example when electric comes in higher.",
   buffer:"A cushion of cash, kept separate, for surprises like a car repair, so they never go on the credit card. Until it reaches your target, money left after bills fills it first. Don't want a buffer? Turn it off in Setup, under Split.",
   card:"How much to pay toward the credit card from this check. Once the buffer is full, everything left after bills goes here until the balance is $0.",
-  savings:"Long-term savings. Your savings % kicks in once the buffer is full and the card is paid off.",
+  savings:()=>isPayoff()?"Long-term savings. Your savings % kicks in once the card is paid off"+(S.useBuffer!==false?" and the buffer is full.":"."):`Your ${S.split.savings}% for long-term savings. Move it to your savings account when the check lands.`,
   freestep:"What's left for everything that isn't a bill: eating out, gas, fun. Log purchases in the Spending tab to see it count down.",
-  spendsum:"<b>Free money</b> is what this check left you to spend. <b>Debit spent</b> and <b>Card spent</b> are what you've logged, split by how you paid. <b>Left</b> is what you can still spend before the next payday.",
-  spendlist:"Every purchase you've logged for this pay period, grouped by week. Tap one to edit or delete it. Card purchases are also added to your card balance.",
+  spendsum:()=>"<b>Free money</b> is what this check left you to spend, plus any extra income you chose to spend. "+(isPayoff()?"<b>Debit spent</b> and <b>Card spent</b> are what you've logged, split by how you paid. ":"<b>Spent</b> is what you've logged. ")+"<b>Left</b> is what you can still spend before the next payday.",
+  spendlist:()=>"Every purchase you've logged for this pay period, grouped by week, with its category. Tap one to edit or delete it."+(isPayoff()?" Card purchases are also added to your card balance.":""),
   cardbal:"What you owe on the credit card. Payments you tick on the Paycheck tab lower it, and card purchases you log raise it. If it doesn't match your card app (interest, refunds, a missed purchase), tap <b>Update card balance</b> and type the real number.",
   bufferbox:"Your emergency cushion. The goal is to never put a surprise expense on the card. If you use some of it, update the balance and the app will refill it from your next checks.",
   savingsbox:"Long-term savings you've moved over from paychecks. Update it any time to match your bank.",
   payoff:"A forecast, one row per paycheck, assuming your bills stay the same and you cover any new card purchases. <b>Buffer</b> and <b>Card pmt</b> are what that check sends to each. <b>Card after</b> is the balance after that payment. The highlighted row is when the card hits $0. A ✓ means you've already entered that check.",
   activity:"A history of everything that changed your balances: card payments, card purchases, buffer and savings moves, and manual updates.",
   paycheck:"Your usual take-home pay per check and the days you're paid. If a check is different, you can change that one when it lands.",
-  splitset:"<b>Bills target</b> is a yardstick that flags checks where bills run high. <b>Savings %</b> is the share of each check that goes to savings once you're out of payoff mode. <b>Payoff mode</b> sends everything left after bills to your buffer, then the card, until both are done. <b>Keep free per check</b> is spending money you hold back while paying off.",
+  splitset:()=>"How each paycheck divides between bills, spending and savings. <b>Bills</b> is a target that flags checks where bills run high; your real bills are always paid in full. <b>Savings</b> comes out of each check when there's room. <b>Spending</b> is whatever is left. Tap Edit for quick presets like 50/30/20 or to fine-tune with sliders."+(isPayoff()?" While you're paying off the card, this split waits and takes over once the card is done.":""),
+  payoffset:"Settings that only apply in Card payoff mode. <b>Emergency buffer</b> is a cash cushion filled before extra card payments; turn it off to send that money straight to the card. <b>Order</b> picks which fills first. <b>Keep free per check</b> is spending money you hold back from each check while paying off.",
+  mode:"Pick how the app plans each paycheck. <b>General budget</b> splits it into bills, savings and spending and leaves the credit card out of it. <b>Card payoff</b> sends everything after bills to an optional emergency buffer, then the card, until it's paid off, then switches to your normal split. Switch any time; nothing is lost.",
+  modegen:"You're in General budget mode. Each check pays its bills, puts your savings % aside, and the rest is free to spend. The credit card isn't part of the plan. Switch to Card payoff in Setup if you want to focus on paying down a card.",
+  modepay:"You're in Card payoff mode. Everything left after bills goes to your buffer and card until both are done. The bars show how far along you are, and the dates are when each should be done if your bills stay the same.",
+  breakdown:"Where your non-bill spending went, by category, biggest first. Switch between this pay period and the whole month. If a category has a limit, the bar turns amber when you're close and red when you're over. The arrows show the change from the previous period or month.",
+  history:"Your total non-bill spending for each of the last six pay periods or months, so you can spot trends. The current one is in bold.",
+  income:()=>"Money outside your regular paychecks, like a bonus, side job or refund. Choose what it's for: <b>Spend it</b> adds it to this period's free money, <b>Save it</b> adds it to your savings balance"+(isPayoff()?", and <b>Pay the card</b> lowers your card balance.":"."),
+  goals:"Things you're saving for, like a vacation or an emergency fund. Goals are slices of your savings. Add money from savings you already have, or new money, which also raises your savings balance.",
+  catsset:"The categories you pick from when you log spending. Tap one to rename it or set a limit per pay period. Deleting a category keeps its purchases; they show as Uncategorized.",
+  data:()=>"<b>Export spending</b> downloads your purchases and extra income as a CSV that opens in Excel or Google Sheets. <b>Back up</b> saves everything to a file you can restore later. "+(mode==="db"?"This copy saves to your Claude account.":"This copy saves on this device only, so back up now and then, especially before switching phones."),
   billsset:"Your recurring bills and the day each one charges. Each bill is paid from the paycheck that lands before its charge date. Twice-a-month costs, like groceries, work best as two bills.",
-  balances:"The current amounts in your credit card, buffer and savings. Set these to match your bank and card apps whenever they drift."
+  balances:()=>isPayoff()?"The current amounts in your credit card, buffer and savings. Set these to match your bank and card apps whenever they drift.":"Your current savings balance. Set it to match your bank whenever it drifts."
 };
 const openHelp=new Set();
 const info=k=>`<button class="info" data-act="help" data-k="${k}" aria-expanded="${openHelp.has(k)}" aria-label="What does this mean?" title="What does this mean?">?</button>`;
-const helpBox=k=>openHelp.has(k)?`<p class="helpbox">${HELP[k]}</p>`:"";
+const helpBox=k=>{if(!openHelp.has(k))return "";const v=HELP[k];return `<p class="helpbox">${typeof v==="function"?v():v}</p>`;};
 const INTRO="andres-budget-intro-done";
 let introDone=false;try{introDone=localStorage.getItem(INTRO)==="1";}catch(e){}
 
 // ---------- state ----------
-const BASE_SETTINGS={payAmount:0,payDays:[15,31],split:{bills:60,savings:20},bufferTarget:1000,useBuffer:true,order:"buffer",payoffMode:true,keepFree:0,bills:[]};
+const DEFAULT_CATS=()=>[["dining","Dining out"],["groc","Groceries (extra)"],["gas","Gas & transport"],["shop","Shopping"],["fun","Entertainment"],["subs","Subscriptions"],["care","Personal care"],["home","Household"],["gifts","Gifts"],["other","Other"]].map(([id,name])=>({id,name,limit:0}));
+const PRESETS=[[50,20,"50/30/20"],[60,20,"60/20/20"],[70,10,"70/20/10"]];
+const BASE_SETTINGS={budgetMode:"general",payAmount:0,payDays:[15,31],split:{bills:50,savings:20},bufferTarget:1000,useBuffer:true,order:"buffer",keepFree:0,bills:[],cats:null,goals:[]};
 // ---------- look (color theme + light/dark) ----------
 const ACCENTS=[["bank","Bank green","#1d5c47","#72c9a3"],["ocean","Ocean","#1f4f8a","#84aee8"],["plum","Plum","#5a3577","#c7a3e3"],["ember","Ember","#9a3d12","#f19366"],["graphite","Graphite","#2b3036","#c9d1d8"],["rose","Rose","#8f2f52","#f08fb3"]];
 const LOOK="andres-budget-look";const hostTheme=document.documentElement.getAttribute("data-theme");
@@ -286,16 +323,24 @@ function applyLook(){const r=document.documentElement;
   if(look.mode==="light"||look.mode==="dark")r.setAttribute("data-theme",look.mode);else if(hostTheme)r.setAttribute("data-theme",hostTheme);else r.removeAttribute("data-theme");}
 applyLook();
 function setLook(patch){look={...look,...patch};applyLook();try{localStorage.setItem(LOOK,JSON.stringify(look));}catch(e){}S.look={...look};saveSettings();render();}
-const bufT=()=>S.useBuffer===false?0:(+S.bufferTarget||0);
-const payoffOn=bal=>S.payoffMode!==false&&(r2(bufT()-bal.buffer)>0.004||bal.card>0.004);
-let S=clone(BASE_SETTINGS), B={buffer:0,card:0,savings:0,log:[]}, P={};
+const isPayoff=()=>S.budgetMode==="payoff";
+const bufT=()=>(!isPayoff()||S.useBuffer===false)?0:(+S.bufferTarget||0);
+const payoffOn=bal=>isPayoff()&&(r2(bufT()-bal.buffer)>0.004||bal.card>0.004);
+let S=normSettings(null), B=normBal(null), P={};
 let mode="loading", DB=null, loaded={s:false,b:false,p:false}, pending=0, readOnly=false;
 let DATES=[], CUR=0;
 const TABS=[["plan","Paycheck"],["spend","Spending"],["card","Card"],["setup","Setup"]];
-let ui={tab:(TABS.some(t=>t[0]===location.hash.slice(1))?location.hash.slice(1):"plan"),idx:null};
+const tabLabel=k=>k==="card"?(isPayoff()?"Card":"Savings"):TABS.find(t=>t[0]===k)[1];
+let ui={tab:(TABS.some(t=>t[0]===location.hash.slice(1))?location.hash.slice(1):"plan"),idx:null,sview:"period"};
 
-function normSettings(o){const s={...clone(BASE_SETTINGS),...clone(o||{})};s.split={...BASE_SETTINGS.split,...(s.split||{})};s.bills=(s.bills||[]).map(b=>({id:b.id||uid(),name:b.name||"Bill",amount:+b.amount||0,day:b.day==="each"?"each":Math.min(31,Math.max(1,+b.day||1)),variable:!!b.variable}));s.payDays=(s.payDays&&s.payDays.length?s.payDays:[15,31]).map(Number).sort((a,b)=>a-b);return s;}
-function normBal(o){const b={buffer:0,card:0,savings:0,log:[],...clone(o||{})};b.buffer=r2(b.buffer);b.card=r2(b.card);b.savings=r2(b.savings);b.log=Array.isArray(b.log)?b.log:[];return b;}
+function normSettings(o){const raw=o||{};const s={...clone(BASE_SETTINGS),...clone(raw)};
+  // Older saves had a payoff on/off flag instead of a mode.
+  if(raw.budgetMode!=="general"&&raw.budgetMode!=="payoff")s.budgetMode=(raw.payAmount&&raw.payoffMode!==false)?"payoff":"general";
+  delete s.payoffMode;
+  s.cats=(Array.isArray(raw.cats)&&raw.cats.length?raw.cats:DEFAULT_CATS()).map(c=>({id:String(c.id||uid()),name:String(c.name||"Category"),limit:Math.max(0,+c.limit||0)}));
+  s.goals=(Array.isArray(raw.goals)?raw.goals:[]).map(g=>({id:String(g.id||uid()),name:String(g.name||"Goal"),target:Math.max(0,+g.target||0)}));
+  s.split={...BASE_SETTINGS.split,...(s.split||{})};s.bills=(s.bills||[]).map(b=>({id:b.id||uid(),name:b.name||"Bill",amount:+b.amount||0,day:b.day==="each"?"each":Math.min(31,Math.max(1,+b.day||1)),variable:!!b.variable}));s.payDays=(s.payDays&&s.payDays.length?s.payDays:[15,31]).map(Number).sort((a,b)=>a-b);return s;}
+function normBal(o){const b={buffer:0,card:0,savings:0,log:[],...clone(o||{})};b.buffer=r2(b.buffer);b.card=r2(b.card);b.savings=r2(b.savings);b.log=Array.isArray(b.log)?b.log:[];b.goals=b.goals&&typeof b.goals==="object"&&!Array.isArray(b.goals)?b.goals:{};b.cardStart=r2(b.cardStart!=null?b.cardStart:b.card);return b;}
 
 function buildDates(){
   const t=new Date();const out=[];
@@ -323,7 +368,7 @@ function plan(i,bal){
   const p=per(i);const pay=r2(p.amount!=null?p.amount:S.payAmount);const lines=billLines(i);const billsTotal=sum(lines.map(l=>l.amt));const left=r2(pay-billsTotal);
   let b,c,s,save;
   if(p.locked){b=r2(p.locked.buffer);c=r2(p.locked.card);s=r2(p.locked.savings);save=r2(b+c+s);}
-  else{const need=Math.max(0,r2(bufT()-bal.buffer));const owe=Math.max(0,r2(bal.card));const keep=Math.max(0,+S.keepFree||0);
+  else{const need=Math.max(0,r2(bufT()-bal.buffer));const owe=isPayoff()?Math.max(0,r2(bal.card)):0;const keep=Math.max(0,+S.keepFree||0);
     // Payoff mode: everything after bills (minus the free-money allowance) fills the buffer, then the card. Normal mode: the savings % does.
     const pool=payoffOn(bal)?Math.floor(Math.max(0,left-keep)):Math.floor(Math.min(pay*S.split.savings/100,Math.max(0,left)));
     if(S.order==="card"){c=Math.min(pool,owe);b=Math.min(r2(pool-c),need);}else{b=Math.min(pool,need);c=Math.min(r2(pool-b),owe);}
@@ -334,6 +379,12 @@ function plan(i,bal){
   return{pay,lines,billsTotal,left,save,buffer:b,card:c,savings:s,fun:r2(left-save),locked:!!p.locked};
 }
 function spentOf(i){const tx=per(i).tx||[];const card=sum(tx.filter(t=>t.method==="card").map(t=>t.amount));const debit=sum(tx.filter(t=>t.method!=="card").map(t=>t.amount));return{card,debit,total:r2(card+debit),covered:r2(per(i).coverPaid||0)};}
+
+const USE={spend:"Added to free money",save:"Moved to savings",card:"Paid toward the card"};
+function extraOf(i){const inc=per(i).income||[];const by=u=>sum(inc.filter(x=>x.use===u).map(x=>x.amount));return{list:inc,spend:by("spend"),save:by("save"),card:by("card"),total:sum(inc.map(x=>x.amount))};}
+function allTx(){const out=[];for(const p of Object.values(P))for(const t of (p.tx||[]))out.push(t);return out;}
+const catName=id=>{const c=S.cats.find(c=>c.id===id);return c?c.name:"Uncategorized";};
+const catKey=t=>S.cats.some(c=>c.id===t.cat)?t.cat:"_none";
 
 // Walk forward from the current check, applying planned moves to simulated balances.
 function projection(n){
@@ -389,7 +440,7 @@ async function boot(){
 
 // ---------- render ----------
 function render(){
-  $("#tabs").innerHTML=TABS.map(([k,l])=>`<button data-tab="${k}" ${ui.tab===k?'aria-current="page"':""}>${l}</button>`).join("");
+  $("#tabs").innerHTML=TABS.map(([k])=>`<button data-tab="${k}" ${ui.tab===k?'aria-current="page"':""}>${tabLabel(k)}</button>`).join("");
   setSave();
   if(mode==="loading")return;
   const views={plan:vPlan,spend:vSpend,card:vCard,setup:vSetup};
@@ -399,7 +450,10 @@ function render(){
   $("#fab").hidden=!(ui.tab==="plan"||ui.tab==="spend")||setupNeeded();
 }
 const setupNeeded=()=>!S.payAmount;
-function setupBanner(){return `<section class="card"><h3>Start with your paycheck</h3><p class="hint">Add your take-home pay and your bills in Setup. Everything else is worked out from those.</p><button class="btn" data-tab="setup">Go to Setup</button></section>`;}
+function modePicker(){return `<div class="modes" role="group" aria-label="Budget mode">
+ <button class="modeopt" data-act="setmode" data-v="general" aria-pressed="${!isPayoff()}"><b>General budget</b><small>Split each check into bills, savings and spending. No credit card focus.</small></button>
+ <button class="modeopt" data-act="setmode" data-v="payoff" aria-pressed="${isPayoff()}"><b>Card payoff</b><small>Everything after bills goes to an emergency buffer, then your credit card, until it's $0.</small></button></div>`;}
+function setupBanner(){return `<section class="card"><h3>Let's set up your budget</h3><p class="hint">First, pick how you want each paycheck planned. You can change this any time in Setup.</p>${modePicker()}<p class="hint">Then add your take-home pay and your bills. Everything else is worked out from those.</p><div class="row2"><button class="btn" data-act="editpay">Add your paycheck</button><button class="btn ghost" data-tab="setup">Go to Setup</button></div></section>`;}
 
 function pnav(){
   const i=ui.idx,a=DATES[i],b=new Date(DATES[i+1]-864e5);const p=per(i);
@@ -410,35 +464,56 @@ function pnav(){
 }
 function daysLeft(i){const end=DATES[i+1];const t=new Date();t.setHours(0,0,0,0);return Math.max(1,Math.round((end-t)/864e5));}
 
+function modeSummary(){
+  if(!isPayoff()){const sp=Math.max(0,100-S.split.bills-S.split.savings);
+    return `<section class="card"><div class="stubhead"><p class="eyebrow">General budget${info("modegen")}</p><button class="linkbtn" data-tab="setup">Change</button></div>${helpBox("modegen")}
+    <div class="legend">${[["Bills",S.split.bills,"--c-bills"],["Spending",sp,"--c-free"],["Savings",S.split.savings,"--c-save"]].map(([n,v,c])=>`<div style="--dot:var(${c})"><span>${n}</span><b class="num">${v}%</b></div>`).join("")}</div></section>`;}
+  const pr=projection(30);const when=test=>{const r=pr.rows.find(r=>test(r.after));return r?md(DATES[r.i]):null;};
+  const bt=bufT();const dCard=B.card>0.004?when(a=>a.card<=0.004):null;const dBuf=bt>0&&B.buffer<bt-0.004?when(a=>a.buffer>=bt-0.004):null;
+  const start=Math.max(B.cardStart||0,B.card);const cPct=start>0?Math.max(0,Math.min(100,(start-B.card)/start*100)):100;
+  const allDone=B.card<=0.004&&(bt<=0||B.buffer>=bt-0.004);
+  const head=allDone?"You did it. The card is paid off"+(bt>0?" and your buffer is full":"")+", so paychecks now follow your normal split."
+    :B.card<=0.004?`Card's paid off. Finishing your buffer${dBuf?` by ${dBuf}`:""}.`
+    :`${fmt(B.card,true)} left on the card${dCard?`, paid off by ${dCard}`:""}.`;
+  const row=(label,val,pct,color,sub)=>`<div class="catr"><div class="top"><b>${label}</b><span class="num">${val}</span></div><div class="meter"><i style="width:${pct}%;background:var(${color})"></i></div><small><span>${sub}</span></small></div>`;
+  return `<section class="card"><div class="stubhead"><p class="eyebrow">Card payoff mode${info("modepay")}</p><button class="linkbtn" data-tab="setup">Change</button></div>${helpBox("modepay")}
+   <h3>${head}</h3><div class="brk">
+   ${bt>0?row("Emergency buffer",`${fmt(B.buffer)} of ${fmt(bt)}`,Math.min(100,B.buffer/bt*100),"--c-buffer",B.buffer>=bt-0.004?"Full":dBuf?`Full with your ${dBuf} check`:"Not full within a year at this pace"):""}
+   ${row("Credit card",B.card<=0.004?"Paid off":`${fmt(B.card,true)} left`,cPct,"--c-card",B.card<=0.004?"Keep it at $0 by covering card purchases each period":`${Math.round(cPct)}% paid off${dCard?` · done with your ${dCard} check`:" · not done within a year at this pace"}`)}
+   </div></section>`;
+}
+
 function vPlan(){
-  const i=ui.idx;const pl=planShown(i);const p=per(i);const sp=spentOf(i);const mv=p.moves||{};
+  const i=ui.idx;const pl=planShown(i);const p=per(i);const sp=spentOf(i);const ex=extraOf(i);const mv=p.moves||{};
+  const pay=isPayoff();const bufOn=pay&&S.useBuffer!==false;
   let h=pnav();
   if(!introDone&&!setupNeeded())h=`<section class="card intro"><h3>How this works</h3><ol>
    <li>Each paycheck pays the bills that charge before your next payday.</li>
-   <li>What's left ${S.useBuffer!==false?"fills your buffer (emergency cash), then pays":"pays"} down the credit card, then goes to savings.</li>
+   <li>${pay?`What's left ${bufOn?"fills your buffer (emergency cash), then pays":"pays"} down the credit card. Once that's done, it goes to savings.`:`Then ${S.split.savings}% goes to savings, and the rest is yours to spend.`}</li>
    <li>When a check lands, tap <b>My paycheck landed</b>, make the moves in your bank app, and tick them off here.</li>
-   <li>Log purchases with <b>Add spending</b> to see your free money count down.</li></ol>
+   <li>Log purchases with <b>Add spending</b> and pick a category to see where your money goes.</li></ol>
    <p class="hint">Tap any <b>?</b> for what a section means.</p><div class="row2"><button class="btn sm" data-act="introok">Got it</button><button class="btn ghost sm" data-act="guide">Full guide</button></div></section>`+h;
+  const fun=r2(pl.fun+ex.spend);
   // hero
   if(i<=CUR){
-    const free=r2(pl.fun-sp.total);const pct=pl.fun>0?Math.min(100,sp.total/pl.fun*100):(sp.total>0?100:0);
-    const sub=i===CUR?(free>0?`${fmt(r2(free/daysLeft(i)),true)} a day for the next ${daysLeft(i)} day${daysLeft(i)>1?"s":""}`:free<0?`Over by ${fmt(-free,true)}. It'll come out of your next check.`:`Nothing free until ${md(DATES[i+1])}.`):`Spent ${fmt(sp.total,true)} of ${fmt(pl.fun,true)}`;
-    h+=`<section class="hero"><div class="lab">${i===CUR?`Free to spend until ${md(DATES[i+1])}`:"Left unspent this period"}${info("free")}</div><div class="big num">${bigMoney(free)}</div><div class="sub">${sub}</div>${i===CUR?`<div class="sub" style="opacity:.75;margin-top:2px">Spent ${fmt(sp.total,true)} of ${fmt(pl.fun,true)}</div>`:""}<div class="track"><i style="width:${pct}%"></i></div>${helpBox("free")}</section>`;
+    const free=r2(fun-sp.total);const pct=fun>0?Math.min(100,sp.total/fun*100):(sp.total>0?100:0);
+    const sub=i===CUR?(free>0?`${fmt(r2(free/daysLeft(i)),true)} a day for the next ${daysLeft(i)} day${daysLeft(i)>1?"s":""}`:free<0?`Over by ${fmt(-free,true)}. It'll come out of your next check.`:`Nothing free until ${md(DATES[i+1])}.`):`Spent ${fmt(sp.total,true)} of ${fmt(fun,true)}`;
+    h+=`<section class="hero"><div class="lab">${i===CUR?`Free to spend until ${md(DATES[i+1])}`:"Left unspent this period"}${info("free")}</div><div class="big num">${bigMoney(free)}</div><div class="sub">${sub}</div>${i===CUR?`<div class="sub" style="opacity:.75;margin-top:2px">Spent ${fmt(sp.total,true)} of ${fmt(fun,true)}${ex.spend?` (includes ${fmt(ex.spend,true)} extra income)`:""}</div>`:""}<div class="track"><i style="width:${pct}%"></i></div>${helpBox("free")}</section>`;
   }else{
-    h+=`<section class="hero"><div class="lab">Planned free money from this check${info("planned")}</div><div class="big num">${bigMoney(pl.fun)}</div><div class="sub">Lands ${dmd(DATES[i])}. Numbers assume no new card spending before then.</div>${helpBox("planned")}</section>`;
+    h+=`<section class="hero"><div class="lab">Planned free money from this check${info("planned")}</div><div class="big num">${bigMoney(fun)}</div><div class="sub">Lands ${dmd(DATES[i])}.${pay?" Numbers assume no new card spending before then.":""}</div>${helpBox("planned")}</section>`;
   }
-  // card cover prompt
+  if(!setupNeeded())h+=modeSummary();
+  // card cover prompt (payoff mode only)
   const owed=r2(sp.card-sp.covered);
-  if(i<=CUR&&owed>0.004)h+=`<section class="card"><h3>Cover this period's card purchases${info("cover")}</h3>${helpBox("cover")}<p class="hint">You put ${fmt(sp.card,true)} on the card from your free money${sp.covered?`, and already sent ${fmt(sp.covered,true)}`:""}. The cash is still in checking, so send it to the card to keep the balance from growing.</p><button class="btn" data-act="cover" data-amt="${owed}">Pay ${fmt(owed,true)} to the card</button></section>`;
+  if(pay&&i<=CUR&&owed>0.004)h+=`<section class="card"><h3>Cover this period's card purchases${info("cover")}</h3>${helpBox("cover")}<p class="hint">You put ${fmt(sp.card,true)} on the card from your free money${sp.covered?`, and already sent ${fmt(sp.covered,true)}`:""}. The cash is still in checking, so send it to the card to keep the balance from growing.</p><button class="btn" data-act="cover" data-amt="${owed}">Pay ${fmt(owed,true)} to the card</button></section>`;
   // stub
-  const bufOn=S.useBuffer!==false;
-  const segs=[["Bills",pl.billsTotal,"--c-bills"],["Buffer",pl.buffer,"--c-buffer"],["Card",pl.card,"--c-card"],["Savings",pl.savings,"--c-save"],["Free",Math.max(0,pl.fun),"--c-free"]].filter(s=>bufOn||s[0]!=="Buffer");
+  const segs=[["Bills",pl.billsTotal,"--c-bills"],["Buffer",pl.buffer,"--c-buffer"],["Card",pl.card,"--c-card"],["Savings",pl.savings,"--c-save"],["Free",Math.max(0,pl.fun),"--c-free"]].filter(s=>(s[0]!=="Buffer"||bufOn)&&(s[0]!=="Card"||pay));
   const tot=Math.max(pl.pay,pl.billsTotal,1);const billPct=pl.pay?Math.round(pl.billsTotal/pl.pay*100):0;
   let target;
   if(pl.left<0)target=`<p class="note bad">Bills due before your next check are ${fmt(-pl.left,true)} more than this paycheck. ${bufOn?"Cover the gap from your buffer, then refill it next check.":"Set aside money from your other check to cover the gap."}</p>`;
-  else if(billPct>S.split.bills)target=`<p class="note warn">Bills take ${billPct}% of this check, over your ${S.split.bills}% target. That's normal for the check that pays rent; your other check carries the savings.</p>`;
-  else target=`<p class="note">Bills take ${billPct}% of this check (target ${S.split.bills}%). Savings gets ${S.split.savings}% of the check when there's room after bills.</p>`;
-  if(!pl.locked&&pl.left>0&&payoffOn(i<=CUR?B:(projection(i-CUR+1).before[i]||B)))target+=`<p class="note">Payoff mode: everything left after bills${S.keepFree?` except ${fmt(S.keepFree)} to spend`:""} goes to ${bufOn?"your buffer, then the card":"the card"}. The ${S.split.savings}% split comes back once ${bufOn?"both are":"it's"} done.</p>`;
+  else if(billPct>S.split.bills)target=`<p class="note warn">Bills take ${billPct}% of this check, over your ${S.split.bills}% target. That's normal for the check that pays rent; your other check does the saving.</p>`;
+  else target=pay?`<p class="note">Bills take ${billPct}% of this check (target ${S.split.bills}%).</p>`:`<p class="note">Bills take ${billPct}% of this check (target ${S.split.bills}%). ${S.split.savings}% goes to savings when there's room, and the rest is yours to spend.</p>`;
+  if(pay&&!pl.locked&&pl.left>0&&payoffOn(i<=CUR?B:(projection(i-CUR+1).before[i]||B)))target+=`<p class="note">Payoff mode: everything left after bills${S.keepFree?` except ${fmt(S.keepFree)} to spend`:""} goes to ${bufOn?"your buffer, then the card":"the card"}. Your ${S.split.savings}% savings split starts once ${bufOn?"both are":"it's"} done.</p>`;
   h+=`<section class="card"><div class="stubhead"><div><p class="eyebrow">Paycheck${pl.locked?"":" (expected)"}${info("split")}</p><div class="amt num">${fmt(pl.pay,true)}</div></div><span class="micr">CHK ${iso(DATES[i]).replaceAll("-","")} · ${pl.locked?"LANDED":"PLANNED"}</span></div>
   <div class="strip" role="img" aria-label="How this paycheck splits">${segs.filter(s=>s[1]>0).map(s=>`<i style="width:${s[1]/tot*100}%;background:var(${s[2]})"></i>`).join("")}</div>
   ${helpBox("split")}<div class="legend">${segs.map(s=>`<div style="--dot:var(${s[2]})"><span>${s[0]}</span><b class="num">${fmt(s[1],true)}</b><em>${pl.pay?Math.round(s[1]/pl.pay*100):0}%</em></div>`).join("")}</div>${target}</section>`;
@@ -448,86 +523,151 @@ function vPlan(){
     return `<div class="step${zero?" zero":""}${on?" done":""}" style="--dot:var(${color})"><span class="n">${n}</span><div class="t"><b>${label}${hk?info(hk):""}</b><small>${sub}</small></div>
     <div class="row2" style="align-items:center;gap:10px;flex-wrap:nowrap"><span class="v num">${fmt(amt,true)}</span>${key&&!zero?`<button class="tick" data-act="move" data-k="${key}" aria-pressed="${on}" aria-label="Mark done" ${lk?"":"disabled"}>${ICON.ok}</button>`:'<span style="width:28px"></span>'}</div>${hk?helpBox(hk):""}</div>`;};
   const billRows=pl.lines.length?`<div class="bills">${pl.lines.map(l=>`<div class="bill${l.paid?" paid":""}"><button class="tick" data-act="billpaid" data-id="${l.id}" aria-pressed="${l.paid}" aria-label="Mark ${esc(l.name)} paid">${ICON.ok}</button><span class="nm">${esc(l.name)}<small>${l.day==="each"?"this check":DOW[l.due.getDay()]+" "+md(l.due)}</small></span><button class="amt num" data-act="billamt" data-id="${l.id}" aria-label="Change ${esc(l.name)} amount">${fmt(l.amt,true)}</button></div>`).join("")}</div>`:"";
-  const afterCard=Math.max(0,r2((i<=CUR?B.card:(projection(i-CUR+1).before[i]||B).card)-(mv.card?0:pl.card)));
-  const bufNow=i<=CUR?B.buffer:(projection(i-CUR+1).before[i]||B).buffer;
+  const before=i<=CUR?B:(projection(i-CUR+1).before[i]||B);
+  const afterCard=Math.max(0,r2(before.card-(mv.card?0:pl.card)));
+  const bufNow=before.buffer;
   let sn=1;
   h+=`<section class="card"><div class="stubhead"><h3>${lk?"Do these in order":"When this check lands"}${info("steps")}</h3>${lk?`<button class="linkbtn" data-act="adjust">Adjust</button>`:""}</div>${helpBox("steps")}
   <div class="steps">
    <div>${step(sn++,null,`Keep ${fmt(pl.billsTotal,true)} for bills`,pl.billsTotal,`${pl.lines.length} due before ${md(DATES[i+1])}. Tick each when it charges.`,"--c-bills","bills")}${billRows}</div>
    ${bufOn?step(sn++,"buffer","Move to your buffer",pl.buffer,pl.buffer>0?`Buffer ${fmt(bufNow)} of ${fmt(bufT())}`:bufNow>=bufT()?"Buffer is full":"Nothing this check","--c-buffer","buffer"):""}
-   ${step(sn++,"card","Pay the credit card",pl.card,pl.card>0?`Balance after: ${fmt(afterCard,true)}`:B.card<=0?"Card is paid off":"Nothing this check","--c-card","card")}
-   ${step(sn++,"savings","Move to savings",pl.savings,pl.savings>0?"Long-term savings":"Nothing this check","--c-save","savings")}
+   ${pay?step(sn++,"card","Pay the credit card",pl.card,pl.card>0?`Balance after: ${fmt(afterCard,true)}`:before.card<=0.004?"Card is paid off":"Nothing this check","--c-card","card"):""}
+   ${step(sn++,"savings","Move to savings",pl.savings,pl.savings>0?(pay?"Long-term savings":`${S.split.savings}% of this check`):pay&&before.card>0.004?"Starts once the card is paid off":"Nothing this check","--c-save","savings")}
    ${step(sn++,null,"Keep the rest to spend",Math.max(0,pl.fun),"Your free money until the next check","--c-free","freestep")}
   </div>
   ${lk?"":`<button class="btn" data-act="landed" ${i>CUR+1?"disabled style=\"opacity:.5\"":""}>My paycheck landed</button>${i>CUR+1?`<p class="hint">You can enter this check once it's the next one up.</p>`:`<p class="hint">Confirm the amount and these moves get locked in, so you can tick them off.</p>`}`}
   </section>`;
+  // extra income
+  if(i<=CUR+1)h+=`<section class="card"><div class="stubhead"><h3>Extra income${info("income")}</h3><button class="linkbtn" data-act="addinc">Add</button></div>${helpBox("income")}
+   ${ex.list.length?`<div class="kv">${ex.list.map(x=>`<div><button style="text-align:left;flex:1" data-act="editinc" data-id="${x.id}"><b>${esc(x.note||"Extra income")}</b><br><small style="color:var(--muted)">${md(fromIso(x.date))} · ${USE[x.use]||""}</small></button><b class="num">+${fmt(x.amount,true)}</b></div>`).join("")}</div>`
+   :`<p class="hint">Got a bonus, side money or a refund? Add it here and choose whether to spend it, save it${pay?" or put it on the card":""}.</p>`}</section>`;
   return h;
 }
 
+function checksInMonth(ym){return DATES.filter(d=>iso(d).startsWith(ym)).length||S.payDays.length;}
+function breakdown(i){
+  const monthly=ui.sview==="month";const all=allTx();
+  let cur,prev,label,prevLabel,mult=1,hist=[];
+  if(monthly){
+    const d=DATES[i];const ym=iso(d).slice(0,7);const pd=new Date(d.getFullYear(),d.getMonth()-1,1);const pym=iso(pd).slice(0,7);
+    cur=all.filter(t=>t.date.startsWith(ym));prev=all.filter(t=>t.date.startsWith(pym));
+    label=`in ${MON[d.getMonth()]}`;prevLabel=MON[pd.getMonth()];mult=checksInMonth(ym);
+    for(let k=5;k>=0;k--){const hd=new Date(d.getFullYear(),d.getMonth()-k,1);const hym=iso(hd).slice(0,7);hist.push({label:`${MON[hd.getMonth()]}${hd.getMonth()===0||k===5?" "+String(hd.getFullYear()).slice(2):""}`,total:sum(all.filter(t=>t.date.startsWith(hym)).map(t=>t.amount)),cur:k===0});}
+  }else{
+    cur=per(i).tx||[];prev=i>0?(per(i-1).tx||[]):[];label="this pay period";prevLabel="last period";
+    for(let k=Math.max(0,i-5);k<=i;k++)hist.push({label:md(DATES[k]),total:sum((per(k).tx||[]).map(t=>t.amount)),cur:k===i});
+  }
+  const byCat=list=>{const o={};list.forEach(x=>{const k=catKey(x);o[k]=r2((o[k]||0)+x.amount);});return o;};
+  const a=byCat(cur),b=byCat(prev);const total=sum(cur.map(t=>t.amount)),ptotal=sum(prev.map(t=>t.amount));
+  const keys=[...S.cats.map(c=>c.id),"_none"].filter(k=>(a[k]||0)>0||((S.cats.find(c=>c.id===k)||{}).limit>0));
+  keys.sort((x,y)=>(a[y]||0)-(a[x]||0));
+  const maxAmt=Math.max(1,...keys.map(k=>a[k]||0));
+  const delta=(d,has)=>!has?"":Math.abs(d)<1?`Same as ${prevLabel}`:d>0?`<span class="up">▲ ${fmt(d)}</span> vs ${prevLabel}`:`<span class="down">▼ ${fmt(-d)}</span> vs ${prevLabel}`;
+  const rows=keys.map(k=>{
+    const c=S.cats.find(c=>c.id===k);const amt=a[k]||0;const lim=c&&c.limit?r2(c.limit*mult):0;const pct=lim?amt/lim*100:amt/maxAmt*100;
+    const st=lim?(amt>lim?["st-over",`Over by ${fmt(r2(amt-lim))}`]:pct>=80?["st-close",`${fmt(r2(lim-amt))} left of ${fmt(lim)}`]:["",`${fmt(r2(lim-amt))} left of ${fmt(lim)}`]):["",""];
+    const color=lim&&amt>lim?"--bad":lim&&pct>=80?"--warn":"--c-free";
+    return `<div class="catr"><div class="top"><b>${esc(catName(k))}</b><span class="num">${fmt(amt,true)}</span></div><div class="meter"><i style="width:${Math.min(100,pct)}%;background:var(${color})"></i></div><small><span class="${st[0]}">${st[1]}</span><span>${delta(r2(amt-(b[k]||0)),prev.length>0)}</span></small></div>`;}).join("");
+  const maxH=Math.max(1,...hist.map(r=>r.total));
+  return `<section class="card"><h3>Where it went${info("breakdown")}</h3>${helpBox("breakdown")}
+   <div class="seg" role="group" aria-label="Show spending for"><button data-act="sview" data-v="period" aria-pressed="${!monthly}">Pay period</button><button data-act="sview" data-v="month" aria-pressed="${monthly}">Month</button></div>
+   <p class="hint" style="margin:0">Spent ${label}: <b class="num" style="color:var(--ink)">${fmt(total,true)}</b>${prev.length?` · ${delta(r2(total-ptotal),true)}`:""}</p>
+   ${rows?`<div class="brk">${rows}</div>`:`<p class="empty">Nothing logged ${label} yet.</p>`}
+   ${monthly&&S.cats.some(c=>c.limit)?`<p class="hint">Limits are set per pay period, so the month view uses ${mult}× each limit.</p>`:""}
+   <p class="eyebrow" style="margin-top:6px">Last 6 ${monthly?"months":"pay periods"}${info("history")}</p>${helpBox("history")}
+   <div class="hist">${hist.map(r=>`<span class="${r.cur?"cur":""}">${r.label}</span><div class="bar"><i style="width:${r.total/maxH*100}%"></i></div><span class="num ${r.cur?"cur":""}">${fmt(r.total)}</span>`).join("")}</div>
+  </section>`;
+}
+
 function vSpend(){
-  const i=ui.idx;const pl=planShown(i);const sp=spentOf(i);const tx=(per(i).tx||[]).slice().sort((a,b)=>b.date.localeCompare(a.date)||b.t-a.t);
+  const i=ui.idx;const pl=planShown(i);const sp=spentOf(i);const ex=extraOf(i);const pay=isPayoff();const free=r2(pl.fun+ex.spend);
+  const tx=(per(i).tx||[]).slice().sort((a,b)=>b.date.localeCompare(a.date)||b.t-a.t);
   let h=pnav();
-  h+=`<section class="card"><h3>This pay period${info("spendsum")}</h3>${helpBox("spendsum")}<div class="legend">
-   <div style="--dot:var(--c-free)"><span>Free money</span><b class="num">${fmt(pl.fun,true)}</b></div>
-   <div style="--dot:var(--c-bills)"><span>Debit spent</span><b class="num">${fmt(sp.debit,true)}</b></div>
-   <div style="--dot:var(--c-card)"><span>Card spent</span><b class="num">${fmt(sp.card,true)}</b></div>
-   <div style="--dot:var(--accent)"><span>Left</span><b class="num">${fmt(r2(pl.fun-sp.total),true)}</b></div></div>
-   <div class="meter"><i style="width:${pl.fun>0?Math.min(100,sp.total/pl.fun*100):0}%;background:${sp.total>pl.fun?"var(--bad)":"var(--c-free)"}"></i></div>
-   ${r2(sp.card-sp.covered)>0.004?`<div class="row2" style="align-items:center"><p class="hint" style="flex:2">${fmt(r2(sp.card-sp.covered),true)} on the card isn't covered yet.</p><button class="btn sm" data-act="cover" data-amt="${r2(sp.card-sp.covered)}">Pay it</button></div>`:""}</section>`;
+  h+=`<section class="card"><div class="stubhead"><h3>This pay period${info("spendsum")}</h3><button class="linkbtn" data-act="addinc">+ Extra income</button></div>${helpBox("spendsum")}<div class="legend">
+   <div style="--dot:var(--c-free)"><span>Free money</span><b class="num">${fmt(free,true)}</b></div>
+   ${pay?`<div style="--dot:var(--c-bills)"><span>Debit spent</span><b class="num">${fmt(sp.debit,true)}</b></div>
+   <div style="--dot:var(--c-card)"><span>Card spent</span><b class="num">${fmt(sp.card,true)}</b></div>`:`<div style="--dot:var(--c-bills)"><span>Spent</span><b class="num">${fmt(sp.total,true)}</b></div>`}
+   <div style="--dot:var(--accent)"><span>Left</span><b class="num">${fmt(r2(free-sp.total),true)}</b></div></div>
+   <div class="meter"><i style="width:${free>0?Math.min(100,sp.total/free*100):0}%;background:${sp.total>free?"var(--bad)":"var(--c-free)"}"></i></div>
+   ${pay&&r2(sp.card-sp.covered)>0.004?`<div class="row2" style="align-items:center"><p class="hint" style="flex:2">${fmt(r2(sp.card-sp.covered),true)} on the card isn't covered yet.</p><button class="btn sm" data-act="cover" data-amt="${r2(sp.card-sp.covered)}">Pay it</button></div>`:""}</section>`;
+  h+=breakdown(i);
   h+=`<section class="card"><h3>Spending this period${info("spendlist")}</h3>${helpBox("spendlist")}`;
   if(!tx.length)h+=`<p class="empty">No spending logged yet. Tap Add spending each time you buy something outside your bills.</p>`;
   else{
     let wk="";tx.forEach(t=>{const d=fromIso(t.date);const ws=new Date(d);ws.setDate(d.getDate()-d.getDay());const k=iso(ws);
       if(k!==wk){wk=k;const wsum=sum(tx.filter(x=>{const xd=fromIso(x.date);const xs=new Date(xd);xs.setDate(xd.getDate()-xd.getDay());return iso(xs)===k;}).map(x=>x.amount));h+=`<div class="wk"><span>Week of ${md(ws)}</span><span class="num">${fmt(wsum,true)}</span></div>`;}
-      h+=`<button class="tx" data-act="edittx" data-id="${t.id}"><span><b>${esc(t.note||"Spending")}<span class="tag ${t.method==="card"?"card":"debit"}">${t.method==="card"?"Card":"Debit"}</span></b><small>${dmd(d)}</small></span><span class="num" style="font-weight:700">${fmt(t.amount,true)}</span></button>`;});
+      h+=`<button class="tx" data-act="edittx" data-id="${t.id}"><span><b>${esc(t.note||catName(t.cat))}</b><small>${dmd(d)}${t.note?`<span class="tag cat">${esc(catName(t.cat))}</span>`:""}${pay&&t.method==="card"?'<span class="tag card">Card</span>':""}</small></span><span class="num" style="font-weight:700">${fmt(t.amount,true)}</span></button>`;});
   }
   return h+`</section>`;
 }
 
+function goalsCard(){
+  const assigned=sum(S.goals.map(g=>B.goals[g.id]||0));const over=assigned>B.savings+0.004;
+  return `<section class="card"><div class="stubhead"><h3>Savings goals${info("goals")}</h3><button class="linkbtn" data-act="editgoal">Add goal</button></div>${helpBox("goals")}
+  ${S.goals.length?`<div class="brk">${S.goals.map(g=>{const sv=B.goals[g.id]||0;const pct=g.target?Math.min(100,sv/g.target*100):0;
+    return `<div class="catr"><div class="top"><button data-act="editgoal" data-id="${g.id}" style="font-weight:600;text-align:left;min-width:0">${esc(g.name)}</button><span class="num">${fmt(sv,true)} <span style="color:var(--muted);font-weight:500">of ${fmt(g.target)}</span></span></div><div class="meter"><i style="width:${pct}%;background:var(--c-save)"></i></div><small><span>${g.target&&sv>=g.target?"Goal reached":`${fmt(r2(Math.max(0,g.target-sv)))} to go`}</span><button class="linkbtn" data-act="goaladd" data-id="${g.id}">Add money</button></small></div>`;}).join("")}</div>
+  <p class="${over?"note warn":"hint"}" style="margin:0">${fmt(assigned,true)} of your ${fmt(B.savings,true)} savings is set aside for goals.${over?" That's more than your savings balance shows. Update the balance or adjust a goal.":""}</p>`
+  :`<p class="empty">No goals yet. Add one, like Vacation or Emergency fund, and watch it fill up.</p>`}</section>`;
+}
+function activityCard(){const log=B.log.slice(0,15);
+  return `<section class="card"><h3>Activity${info("activity")}</h3>${helpBox("activity")}${log.length?`<div class="kv">${log.map(l=>`<div><span>${esc(l.note||l.kind)}<br><small class="micr">${new Date(l.t).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</small></span><b class="num">${l.amt>0?"+":""}${fmt(l.amt,true)}</b></div>`).join("")}</div>`:`<p class="empty">Savings moves, goal money${isPayoff()?", card payments, purchases":""} and balance updates show up here.</p>`}</section>`;}
+
 function vCard(){
+  if(!isPayoff()){
+    const pr=projection(S.payDays.length+1);const next=pr.rows.find(r=>r.pl.savings>0&&!per(r.i).locked);
+    let h=`<section class="hero"><div class="lab">Savings${info("savingsbox")}</div><div class="big num">${bigMoney(B.savings)}</div>
+     <div class="sub">${next?`Your ${md(DATES[next.i])} check adds ${fmt(next.pl.savings)}.`:`Set a savings % in Setup to grow this each payday.`}</div>${helpBox("savingsbox")}</section>
+     <div class="row2"><button class="btn" data-act="setbal" data-k="savings">Update savings balance</button></div>`;
+    return h+goalsCard()+activityCard();
+  }
   const pr=projection(26);const payoff=B.card>0?pr.rows.find(r=>r.after.card<=0):null;
   let h=`<section class="hero" style="background:${B.card>0?"var(--c-card)":"var(--good)"}"><div class="lab">Credit card balance${info("cardbal")}</div><div class="big num">${bigMoney(B.card)}</div>
-  <div class="sub">${B.card<=0?"Paid off. Keep it at $0 by covering card purchases each period.":payoff?`At this pace it hits $0 with your ${md(DATES[payoff.i])} check.`:"Not paid off within the next year at this pace. Raise your savings % in Setup to speed it up."}</div>${helpBox("cardbal")}</section>
+  <div class="sub">${B.card<=0?"Paid off. Keep it at $0 by covering card purchases each period.":payoff?`At this pace it hits $0 with your ${md(DATES[payoff.i])} check.`:"Not paid off within the next year at this pace."}</div>${helpBox("cardbal")}</section>
   <div class="row2"><button class="btn" data-act="setbal" data-k="card">Update card balance</button></div>`;
   const bufOn=S.useBuffer!==false;
   const bp=S.bufferTarget?Math.min(100,B.buffer/S.bufferTarget*100):100;
   if(bufOn)h+=`<section class="card"><div class="stubhead"><h3>Buffer${info("bufferbox")}</h3><button class="linkbtn" data-act="setbal" data-k="buffer">Update</button></div>${helpBox("bufferbox")}
    <div class="stubhead"><span class="amt num" style="font-size:24px">${fmt(B.buffer,true)}</span><span class="micr">TARGET ${fmt(S.bufferTarget)}</span></div>
    <div class="meter"><i style="width:${bp}%;background:var(--c-buffer)"></i></div>
-   <p class="hint">${B.buffer>=S.bufferTarget?"Full. Surprise bills come out of here, not the card.":`Until this is full, ${S.order==="card"?"the card gets paid first, then the buffer fills.":"your savings money fills this first, then goes to the card."} You can change the order in Setup.`}</p></section>`;
+   <p class="hint">${B.buffer>=S.bufferTarget?"Full. Surprise bills come out of here, not the card.":`Until this is full, ${S.order==="card"?"the card gets paid first, then the buffer fills.":"money left after bills fills this first, then goes to the card."} You can change the order in Setup.`}</p></section>`;
   h+=`<section class="card"><div class="stubhead"><h3>Savings${info("savingsbox")}</h3><button class="linkbtn" data-act="setbal" data-k="savings">Update</button></div>${helpBox("savingsbox")}<span class="amt num" style="font-family:var(--display);font-size:24px;font-weight:800">${fmt(B.savings,true)}</span></section>`;
+  h+=goalsCard();
   const rows=[];for(const r of pr.rows){rows.push(r);if(r.after.card<=0&&r.after.buffer>=bufT()&&rows.length>=4)break;if(rows.length>=14)break;}
   h+=`<section class="card"><h3>Payoff schedule${info("payoff")}</h3>${helpBox("payoff")}<p class="hint">Each paycheck from now, assuming your bills stay the same and you cover any new card purchases.</p>
    <div class="tablewrap"><table class="num"><thead><tr><th>Check</th>${bufOn?"<th>Buffer</th>":""}<th>Card pmt</th><th>Card after</th><th>Savings</th></tr></thead><tbody>
    ${rows.map(r=>`<tr class="${payoff&&r.i===payoff.i?"hit":""}"><td>${md(DATES[r.i])}${per(r.i).locked?" ✓":""}</td>${bufOn?`<td>${fmt(r.pl.buffer)}</td>`:""}<td>${fmt(r.pl.card)}</td><td>${fmt(r.after.card)}</td><td>${fmt(r.pl.savings)}</td></tr>`).join("")}
    </tbody></table></div></section>`;
-  const log=B.log.slice(0,15);
-  h+=`<section class="card"><h3>Activity${info("activity")}</h3>${helpBox("activity")}${log.length?`<div class="kv">${log.map(l=>`<div><span>${esc(l.note||l.kind)}<br><small class="micr">${new Date(l.t).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</small></span><b class="num">${l.amt>0?"+":""}${fmt(l.amt,true)}</b></div>`).join("")}</div>`:`<p class="empty">Card payments, purchases and balance updates show up here.</p>`}</section>`;
-  return h;
+  return h+activityCard();
 }
 
 function vSetup(){
-  const fn=Math.max(0,100-S.split.bills-S.split.savings);
-  // monthly view from the next full cycle of checks
+  const pay=isPayoff();const fn=Math.max(0,100-S.split.bills-S.split.savings);
   const pr=projection(S.payDays.length+1);const cyc=pr.rows.slice(1,1+S.payDays.length);const mPay=sum(cyc.map(r=>r.pl.pay));
   const mB=sum(cyc.map(r=>r.pl.billsTotal)),mS=sum(cyc.map(r=>r.pl.save)),mF=sum(cyc.map(r=>Math.max(0,r.pl.fun)));
   const pc=v=>mPay?Math.round(v/mPay*100)+"%":"–";
-  let h=`<section class="card"><div class="stubhead"><h3>Paycheck${info("paycheck")}</h3><button class="linkbtn" data-act="editpay">Edit</button></div>${helpBox("paycheck")}
+  const preset=PRESETS.find(([b,sv])=>b===S.split.bills&&sv===S.split.savings);
+  let h=`<section class="card"><h3>Budget mode${info("mode")}</h3>${helpBox("mode")}${modePicker()}</section>
+  <section class="card"><div class="stubhead"><h3>Paycheck${info("paycheck")}</h3><button class="linkbtn" data-act="editpay">Edit</button></div>${helpBox("paycheck")}
    <div class="kv"><div><span>Take-home per check</span><b class="num">${fmt(S.payAmount,true)}</b></div><div><span>Paydays</span><b>${S.payDays.map(dayLabel).join(" and ")}</b></div></div></section>
-  <section class="card"><div class="stubhead"><h3>Split${info("splitset")}</h3><button class="linkbtn" data-act="editsplit">Edit</button></div>${helpBox("splitset")}
-   <div class="kv"><div><span>Bills target</span><b>${S.split.bills}%</b></div><div><span>Savings (buffer, card, then savings)</span><b>${S.split.savings}%</b></div><div><span>Free to spend target</span><b>${fn}%</b></div>
-   <div><span>Emergency buffer</span><b class="num">${S.useBuffer!==false?fmt(S.bufferTarget)+" target":"Off"}</b></div>${S.useBuffer!==false?`<div><span>Order</span><b>${S.order==="card"?"Card, then buffer":"Buffer, then card"}</b></div>`:""}
-   <div><span>Payoff mode</span><b>${S.payoffMode!==false?(payoffOn(B)?"On":"On (done)"):"Off"}</b></div>${S.payoffMode!==false?`<div><span>Keep free per check while paying off</span><b class="num">${fmt(S.keepFree||0)}</b></div>`:""}</div>
-   ${mPay?`<p class="note">Over a full month your bills are ${pc(mB)} of pay, savings ${pc(mS)}, free ${pc(mF)}.</p>`:""}</section>
-  <section class="card"><div class="stubhead"><h3>Bills${info("billsset")}</h3><button class="linkbtn" data-act="editbill">Add bill</button></div>${helpBox("billsset")}
+  <section class="card"><div class="stubhead"><h3>Split${preset?` <span class="pill">${preset[2]}</span>`:""}${info("splitset")}</h3><button class="linkbtn" data-act="editsplit">Edit</button></div>${helpBox("splitset")}
+   <div class="legend">${[["Bills",S.split.bills,"--c-bills"],["Spending",fn,"--c-free"],["Savings",S.split.savings,"--c-save"]].map(([n,v,c])=>`<div style="--dot:var(${c})"><span>${n}</span><b class="num">${v}%</b></div>`).join("")}</div>
+   ${mPay?`<p class="note">${pay?"Right now, with payoff mode working, a full month looks like":"Over a full month with your real bills,"} bills ${pc(mB)} of pay, ${pay?"buffer, card and savings":"savings"} ${pc(mS)}, spending ${pc(mF)}.</p>`:""}</section>`;
+  if(pay)h+=`<section class="card"><div class="stubhead"><h3>Card payoff settings${info("payoffset")}</h3><button class="linkbtn" data-act="editpayoff">Edit</button></div>${helpBox("payoffset")}
+   <div class="kv"><div><span>Emergency buffer</span><b class="num">${S.useBuffer!==false?fmt(S.bufferTarget)+" target":"Off"}</b></div>${S.useBuffer!==false?`<div><span>Order</span><b>${S.order==="card"?"Card, then buffer":"Buffer, then card"}</b></div>`:""}
+   <div><span>Keep free per check while paying off</span><b class="num">${fmt(S.keepFree||0)}</b></div></div></section>`;
+  h+=`<section class="card"><div class="stubhead"><h3>Bills${info("billsset")}</h3><button class="linkbtn" data-act="editbill">Add bill</button></div>${helpBox("billsset")}
    ${S.bills.length?`<div class="kv">${S.bills.slice().sort((a,b)=>(a.day==="each"?0:a.day)-(b.day==="each"?0:b.day)).map(b=>`<div><button style="text-align:left;flex:1" data-act="editbill" data-id="${b.id}"><b style="text-align:left">${esc(b.name)}</b>${b.variable?' <span class="tag debit">Varies</span>':""}<br><small style="color:var(--muted)">${b.day==="each"?"Comes out of every check":"Charges on the "+dayLabel(b.day)}</small></button><b class="num">${fmt(b.amount,true)}</b></div>`).join("")}
    <div><span>Monthly total</span><b class="num">${fmt(sum(S.bills.map(b=>b.day==="each"?b.amount*S.payDays.length:b.amount)),true)}</b></div></div>`:`<p class="empty">No bills yet. Add rent, utilities, loans and anything that charges on a set day.</p>`}
    <p class="hint">Each bill is paid from the paycheck that lands before its charge date. Split twice-a-month costs like groceries into two bills.</p></section>
+  <section class="card"><div class="stubhead"><h3>Spending categories${info("catsset")}</h3><button class="linkbtn" data-act="editcat">Add</button></div>${helpBox("catsset")}
+   <div class="kv">${S.cats.map(c=>`<div><button style="text-align:left;flex:1" data-act="editcat" data-id="${c.id}"><b style="text-align:left">${esc(c.name)}</b></button><span>${c.limit?`<b class="num" style="color:var(--ink)">${fmt(c.limit)}</b> limit`:"No limit"}</span></div>`).join("")}</div></section>
   <section class="card"><h3>Color theme</h3>
    <div class="swatches">${ACCENTS.map(([k,n,l,d])=>`<button class="swatch" data-act="accent" data-v="${k}" aria-pressed="${look.accent===k}" style="--swl:${l};--swd:${d}"><i></i>${n}</button>`).join("")}</div>
    <div class="chips">${[["system","Match device"],["light","Light"],["dark","Dark"]].map(([k,n])=>`<button data-act="mode" data-v="${k}" aria-pressed="${look.mode===k}">${n}</button>`).join("")}</div></section>
-  <section class="card"><h3>Balances${info("balances")}</h3>${helpBox("balances")}<div class="kv"><div><span>Credit card</span><b class="num">${fmt(B.card,true)}</b></div><div><span>Buffer</span><b class="num">${fmt(B.buffer,true)}</b></div><div><span>Savings</span><b class="num">${fmt(B.savings,true)}</b></div></div>
-   <div class="row2"><button class="btn ghost sm" data-act="setbal" data-k="card">Card</button><button class="btn ghost sm" data-act="setbal" data-k="buffer">Buffer</button><button class="btn ghost sm" data-act="setbal" data-k="savings">Savings</button></div></section>`;
+  <section class="card"><h3>Balances${info("balances")}</h3>${helpBox("balances")}<div class="kv">${pay?`<div><span>Credit card</span><b class="num">${fmt(B.card,true)}</b></div>`:""}${pay&&S.useBuffer!==false?`<div><span>Buffer</span><b class="num">${fmt(B.buffer,true)}</b></div>`:""}<div><span>Savings</span><b class="num">${fmt(B.savings,true)}</b></div></div>
+   <div class="row2">${pay?`<button class="btn ghost sm" data-act="setbal" data-k="card">Card</button>`:""}${pay&&S.useBuffer!==false?`<button class="btn ghost sm" data-act="setbal" data-k="buffer">Buffer</button>`:""}<button class="btn ghost sm" data-act="setbal" data-k="savings">Savings</button></div></section>
+  <section class="card"><h3>Your data${info("data")}</h3>${helpBox("data")}
+   <div class="row2"><button class="btn ghost sm" data-act="exportcsv">Export spending</button><button class="btn ghost sm" data-act="backup">Back up</button><button class="btn ghost sm" data-act="restore">Restore</button></div></section>`;
   return h;
 }
 
@@ -543,59 +683,69 @@ const num=v=>r2(parseFloat(String(v).replace(/[$,]/g,""))||0);
 const money=(id,label,val,extra)=>`<div class="field"><label for="${id}">${label}</label><div class="money${extra?" big":""}"><input id="${id}" name="${id}" inputmode="decimal" value="${val!=null?r2(val):""}" autocomplete="off"></div></div>`;
 const actions=(save,del)=>`<div class="row2">${del?`<button type="button" class="btn danger" data-sact="del">${del}</button>`:""}<button type="button" class="btn ghost" data-sact="close">Cancel</button><button class="btn">${save}</button></div>`;
 
+function moveFields(pl){const pay=isPayoff();const bufOn=pay&&S.useBuffer!==false;
+  return `${pay?`<div class="grid2">${bufOn?money("buffer","To buffer",pl.buffer):""}${money("card","To credit card",pl.card)}</div>`:""}${money("savings","To savings",pl.savings)}`;}
+const F=(f,n)=>f.querySelector(`[name="${n}"]`);
+const fval=(f,k)=>F(f,k)?num(F(f,k).value):0;
 function sheetLanded(){
-  const i=ui.idx;const p=per(i);
+  const i=ui.idx;
   const calc=amt=>{const id=pid(i);const orig=P[id];P[id]={...(orig||{}),amount:amt};const pl=plan(i,B);if(orig)P[id]=orig;else delete P[id];return pl;};
   const pl=planShown(i);
   openSheet(`<h3>Paycheck for ${dmd(DATES[i])}</h3><p class="hint">Enter what actually hit your account. The moves below update to match; change any of them if you want.</p>
-  <form>${money("pay","Amount that landed",pl.pay,true)}
-   <div class="grid2">${money("buffer","To buffer",pl.buffer)}${money("card","To credit card",pl.card)}</div>${money("savings","To savings",pl.savings)}
+  <form>${money("pay","Amount that landed",pl.pay,true)}${moveFields(pl)}
    <p class="note" id="leftnote"></p>${actions("Lock it in")}</form>`,fd=>{
      const amt=num(fd.get("pay"));const lockv={buffer:num(fd.get("buffer")),card:num(fd.get("card")),savings:num(fd.get("savings"))};
      P[pid(i)]={...per(i),amount:amt,locked:lockv,moves:per(i).moves||{}};savePer(i);closeSheet();render();toast("Paycheck locked in. Tick off each move as you make it.");});
   const f=$("#sheetroot form");let touched=false;
-  const upd=()=>{const amt=num(f.pay.value);const bt=billLines(i).reduce((t,l)=>t+l.amt,0);const fun=r2(amt-bt-num(f.buffer.value)-num(f.card.value)-num(f.savings.value));
+  const upd=()=>{const amt=num(F(f,"pay").value);const bt=billLines(i).reduce((t,l)=>t+l.amt,0);const fun=r2(amt-bt-fval(f,"buffer")-fval(f,"card")-fval(f,"savings"));
     $("#leftnote").textContent=`Bills ${fmt(r2(bt),true)} · free to spend ${fmt(fun,true)}`;$("#leftnote").className="note"+(fun<0?" bad":"");};
-  f.pay.addEventListener("input",()=>{if(!touched){const c=calc(num(f.pay.value));f.buffer.value=c.buffer;f.card.value=c.card;f.savings.value=c.savings;}upd();});
-  ["buffer","card","savings"].forEach(k=>f[k].addEventListener("input",()=>{touched=true;upd();}));upd();
+  F(f,"pay").addEventListener("input",()=>{if(!touched){const c=calc(num(F(f,"pay").value));["buffer","card","savings"].forEach(k=>{if(F(f,k))F(f,k).value=c[k];});}upd();});
+  ["buffer","card","savings"].forEach(k=>{if(F(f,k))F(f,k).addEventListener("input",()=>{touched=true;upd();});});upd();
 }
 function sheetAdjust(){
   const i=ui.idx;const p=per(i);const pl=plan(i,B);const mv=p.moves||{};const anyDone=mv.buffer||mv.card||mv.savings;
   openSheet(`<h3>Adjust this check</h3><p class="hint">${anyDone?"Moves you've already ticked are locked. Untick one to change it.":"Change the amount or any move."}</p>
-  <form>${money("pay","Paycheck amount",pl.pay)}<div class="grid2">${money("buffer","To buffer",pl.buffer)}${money("card","To credit card",pl.card)}</div>${money("savings","To savings",pl.savings)}
+  <form>${money("pay","Paycheck amount",pl.pay)}${moveFields(pl)}
   ${actions("Save",anyDone?null:"Unlock")}</form>`,fd=>{
     const nv={buffer:num(fd.get("buffer")),card:num(fd.get("card")),savings:num(fd.get("savings"))};
     for(const k of ["buffer","card","savings"])if(mv[k])nv[k]=pl[k];
     P[pid(i)]={...per(i),amount:num(fd.get("pay")),locked:nv};savePer(i);closeSheet();render();toast("Saved");},
   act=>{if(act==="del"){const q={...per(i)};delete q.locked;delete q.moves;delete q.amount;P[pid(i)]=q;savePer(i);closeSheet();render();toast("Unlocked. It'll follow the automatic plan again.");}});
-  const f=$("#sheetroot form");for(const k of ["buffer","card","savings"])if(mv[k])f[k].disabled=true;
+  const f=$("#sheetroot form");for(const k of ["buffer","card","savings"])if(mv[k]&&F(f,k))F(f,k).disabled=true;
 }
 function sheetTx(id){
   let found=null,fi=null;if(id)DATES.forEach((d,i)=>{const t=(per(i).tx||[]).find(x=>x.id===id);if(t){found=t;fi=i;}});
-  const t=found||{amount:"",note:"",method:"debit",date:iso(new Date())};let method=t.method;
-  openSheet(`<h3>${found?"Edit spending":"Add spending"}</h3><p class="hint">Anything outside your bills. Card purchases also get added to your card balance.</p>
+  const pay=isPayoff();
+  const t=found||{amount:"",note:"",method:"debit",date:iso(new Date()),cat:""};let method=pay?t.method:"debit";let cat=S.cats.some(c=>c.id===t.cat)?t.cat:"";
+  openSheet(`<h3>${found?"Edit spending":"Add spending"}</h3><p class="hint">Anything outside your bills.${pay?" Card purchases also get added to your card balance.":""}</p>
   <form>${money("amount","Amount",t.amount===""?null:t.amount,true)}
-   <div class="field"><label for="note">What for</label><input id="note" name="note" value="${esc(t.note)}" placeholder="Dinner, gas, Target run" autocomplete="off"></div>
-   <div class="field"><span class="flabel">Paid with</span><div class="chips" id="meth"><button type="button" data-m="debit" aria-pressed="${method!=="card"}">Debit or cash</button><button type="button" data-m="card" aria-pressed="${method==="card"}">Credit card</button></div></div>
+   <div class="field"><span class="flabel">Category</span><div class="chips" id="cats">${S.cats.map(c=>`<button type="button" data-c="${c.id}" aria-pressed="${c.id===cat}">${esc(c.name)}</button>`).join("")}<button type="button" data-c="_new" aria-pressed="false">+ New</button></div>
+    <input id="newcat" name="newcat" placeholder="New category name, like Coffee" autocomplete="off" hidden maxlength="40"></div>
+   <div class="field"><label for="note">What for <span style="text-transform:none;letter-spacing:0;font-weight:500">(optional)</span></label><input id="note" name="note" value="${esc(t.note)}" placeholder="Dinner, gas, Target run" autocomplete="off"></div>
+   ${pay?`<div class="field"><span class="flabel">Paid with</span><div class="chips" id="meth"><button type="button" data-m="debit" aria-pressed="${method!=="card"}">Debit or cash</button><button type="button" data-m="card" aria-pressed="${method==="card"}">Credit card</button></div></div>`:""}
    <div class="field"><label for="date">Date</label><input id="date" name="date" type="date" value="${t.date}"></div>
    <p class="err" id="err" hidden style="color:var(--bad);margin:0;font-size:13px"></p>
    ${actions(found?"Save":"Add",found?"Delete":null)}</form>`,fd=>{
-    const amount=num(fd.get("amount"));const date=fd.get("date")||iso(new Date());
-    if(amount<=0){const e=$("#err");e.textContent="Enter an amount above $0.";e.hidden=false;return;}
+    const amount=num(fd.get("amount"));const date=fd.get("date")||iso(new Date());const err=m=>{const e=$("#err");e.textContent=m;e.hidden=false;};
+    if(amount<=0)return err("Enter an amount above $0.");
+    if(cat==="_new"){const nm=String(fd.get("newcat")||"").trim();if(!nm)return err("Type a name for the new category.");
+      const ex=S.cats.find(c=>c.name.toLowerCase()===nm.toLowerCase());if(ex)cat=ex.id;else{const nc={id:uid(),name:nm,limit:0};S.cats=[...S.cats,nc];cat=nc.id;saveSettings();}}
+    if(!cat)cat=S.cats.some(c=>c.id==="other")?"other":(S.cats[0]||{}).id||"";
     if(found)removeTx(fi,found);
-    const ti=idxForDate(fromIso(date));const nt={id:found?found.id:uid(),t:Date.now(),amount,note:String(fd.get("note")||"").trim(),method,date};
+    const ti=idxForDate(fromIso(date));const nt={id:found?found.id:uid(),t:Date.now(),amount,note:String(fd.get("note")||"").trim(),method,date,cat};
     P[pid(ti)]={...per(ti),tx:[...(per(ti).tx||[]),nt]};
-    if(method==="card"){B.card=r2(B.card+amount);logBal("purchase",amount,`Card: ${nt.note||"purchase"}`);saveBal();}
-    savePer(ti);closeSheet();render();toast(found?"Saved":`Added ${fmt(amount,true)}`);},
+    if(pay&&method==="card"){B.card=r2(B.card+amount);logBal("purchase",amount,`Card: ${nt.note||catName(cat)}`);saveBal();}
+    savePer(ti);closeSheet();render();toast(found?"Saved":`Added ${fmt(amount,true)} to ${catName(cat)}`);},
   act=>{if(act==="del"&&found){removeTx(fi,found);closeSheet();render();toast("Deleted");}});
-  $("#meth").addEventListener("click",e=>{const b=e.target.closest("[data-m]");if(!b)return;method=b.dataset.m;$("#meth").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));});
+  $("#cats").addEventListener("click",e=>{const b=e.target.closest("[data-c]");if(!b)return;cat=b.dataset.c;$("#cats").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));const nc=$("#newcat");nc.hidden=cat!=="_new";if(cat==="_new")nc.focus();});
+  if(pay)$("#meth").addEventListener("click",e=>{const b=e.target.closest("[data-m]");if(!b)return;method=b.dataset.m;$("#meth").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));});
 }
-function removeTx(i,t){P[pid(i)]={...per(i),tx:(per(i).tx||[]).filter(x=>x.id!==t.id)};if(t.method==="card"){B.card=r2(Math.max(0,B.card-t.amount));logBal("purchase",-t.amount,`Removed card purchase: ${t.note||""}`);saveBal();}savePer(i);}
+function removeTx(i,t){P[pid(i)]={...per(i),tx:(per(i).tx||[]).filter(x=>x.id!==t.id)};if(t.method==="card"&&isPayoff()){B.card=r2(Math.max(0,B.card-t.amount));logBal("purchase",-t.amount,`Removed card purchase: ${t.note||""}`);saveBal();}savePer(i);}
 function sheetBal(k){
   const names={card:"credit card balance",buffer:"buffer balance",savings:"savings balance"};
   openSheet(`<h3>Update ${names[k]}</h3><p class="hint">${k==="card"?"Type the balance from your card app. New charges, interest, refunds — whatever changed, this resets it.":"Type what's in the account right now."}</p>
   <form>${money("v","Current balance",B[k],true)}${actions("Update")}</form>`,fd=>{
-    const v=num(fd.get("v"));const d=r2(v-B[k]);B[k]=v;logBal("set",d,`${k==="card"?"Card":k==="buffer"?"Buffer":"Savings"} balance set to ${fmt(v,true)}`);saveBal();closeSheet();render();toast("Balance updated");});
+    const v=num(fd.get("v"));const d=r2(v-B[k]);if(k==="card"&&(v>B.cardStart||B.card<=0.004))B.cardStart=v;B[k]=v;logBal("set",d,`${k==="card"?"Card":k==="buffer"?"Buffer":"Savings"} balance set to ${fmt(v,true)}`);saveBal();closeSheet();render();toast("Balance updated");});
 }
 function sheetBillAmt(id){
   const i=ui.idx;const l=billLines(i).find(x=>x.id===id);if(!l)return;
@@ -612,22 +762,124 @@ function sheetPay(){
   ${actions("Save")}</form>`,fd=>{S.payAmount=num(fd.get("pay"));S.payDays=[...new Set([+fd.get("d1"),+fd.get("d2")])].sort((a,b)=>a-b);saveSettings();buildDates();ui.idx=CUR;closeSheet();render();toast("Saved");});
 }
 function sheetSplit(){
-  openSheet(`<h3>Split</h3><p class="hint">Bills always get paid first. Savings takes its share of each check when there's room, and goes to your buffer and card before regular savings.</p>
-  <form><div class="field"><label for="bills">Bills target <span id="bv">${S.split.bills}%</span></label><input type="range" id="bills" name="bills" min="30" max="80" step="5" value="${S.split.bills}"><p class="hint">A yardstick only. It flags checks where bills run over.</p></div>
+  openSheet(`<h3>Split</h3><p class="hint">Bills always get paid first. ${isPayoff()?"While you're paying off the card, savings waits; this split takes over once the card is done.":"Then your savings % comes out, and the rest is yours to spend."}</p>
+  <form><div class="field"><span class="flabel">Quick presets</span><div class="chips" id="pre">${PRESETS.map(([b,sv,n])=>`<button type="button" data-b="${b}" data-s="${sv}">${n}</button>`).join("")}</div><p class="hint">Bills / spending / savings. Pick one, then fine-tune below if you want.</p></div>
+  <div class="field"><label for="bills">Bills target <span id="bv">${S.split.bills}%</span></label><input type="range" id="bills" name="bills" min="30" max="80" step="5" value="${S.split.bills}"><p class="hint">A yardstick only. It flags checks where bills run over.</p></div>
   <div class="field"><label for="savings">Savings <span id="sv">${S.split.savings}%</span></label><input type="range" id="savings" name="savings" min="0" max="50" step="1" value="${S.split.savings}"></div>
   <p class="note" id="fv"></p>
-  <label style="display:flex;gap:10px;align-items:flex-start;font-size:14px"><input type="checkbox" name="usebuf" id="usebuf" style="width:auto;margin-top:3px" ${S.useBuffer!==false?"checked":""}><span><b>Keep an emergency buffer</b><br><span style="color:var(--muted)">A cash cushion for surprises, filled before extra card payments. Turn off to send that money straight to the card.</span></span></label>
+  ${actions("Save")}</form>`,fd=>{S.split={bills:+fd.get("bills"),savings:+fd.get("savings")};saveSettings();closeSheet();render();toast("Split saved");});
+  const f=$("#sheetroot form");
+  const u=()=>{$("#bv").textContent=F(f,"bills").value+"%";$("#sv").textContent=F(f,"savings").value+"%";const fr=100-F(f,"bills").value-F(f,"savings").value;
+    $("#fv").textContent=`Spending: ${Math.max(0,fr)}%`+(fr<0?". Bills and savings add up to more than 100%.":"");$("#fv").className="note"+(fr<0?" bad":"");
+    $("#pre").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",+x.dataset.b===+F(f,"bills").value&&+x.dataset.s===+F(f,"savings").value));};
+  F(f,"bills").addEventListener("input",u);F(f,"savings").addEventListener("input",u);
+  $("#pre").addEventListener("click",e=>{const b=e.target.closest("[data-b]");if(!b)return;F(f,"bills").value=b.dataset.b;F(f,"savings").value=b.dataset.s;u();});u();
+}
+function sheetPayoff(){
+  openSheet(`<h3>Card payoff settings</h3><p class="hint">Until the card is paid off, everything left after bills goes to it, after the buffer if you keep one.</p>
+  <form><label style="display:flex;gap:10px;align-items:flex-start;font-size:14px"><input type="checkbox" name="usebuf" id="usebuf" style="width:auto;margin-top:3px" ${S.useBuffer!==false?"checked":""}><span><b>Keep an emergency buffer</b><br><span style="color:var(--muted)">A cash cushion for surprises, filled before extra card payments. Turn off to send that money straight to the card.</span></span></label>
   <div id="bufopts" style="display:flex;flex-direction:column;gap:14px" ${S.useBuffer!==false?"":"hidden"}>
   ${money("target","Buffer target",S.bufferTarget)}
   <div class="field"><span class="flabel">Order</span><div class="chips" id="ord"><button type="button" data-o="buffer" aria-pressed="${S.order!=="card"}">Buffer first, then card</button><button type="button" data-o="card" aria-pressed="${S.order==="card"}">Card first, then buffer</button></div></div></div>
-  <label style="display:flex;gap:10px;align-items:flex-start;font-size:14px"><input type="checkbox" name="payoff" style="width:auto;margin-top:3px" ${S.payoffMode!==false?"checked":""}><span><b>Payoff mode</b><br><span style="color:var(--muted)">Until the buffer is full and the card is at $0, everything left after bills goes to them instead of the savings %.</span></span></label>
-  ${money("keep","Keep free per check while paying off",S.keepFree||0)}
-  ${actions("Save")}</form>`,fd=>{S.split={bills:+fd.get("bills"),savings:+fd.get("savings")};S.bufferTarget=num(fd.get("target"));S.order=order;S.useBuffer=!!fd.get("usebuf");S.payoffMode=!!fd.get("payoff");S.keepFree=num(fd.get("keep"));saveSettings();closeSheet();render();toast("Split saved");});
-  let order=S.order;const f=$("#sheetroot form");f.usebuf.addEventListener("change",()=>{$("#bufopts").hidden=!f.usebuf.checked;});
-  const u=()=>{$("#bv").textContent=f.bills.value+"%";$("#sv").textContent=f.savings.value+"%";const fr=100-f.bills.value-f.savings.value;$("#fv").textContent=`Free to spend target: ${Math.max(0,fr)}%`+(fr<0?". Bills and savings add up to more than 100%.":"");};
-  f.bills.addEventListener("input",u);f.savings.addEventListener("input",u);u();
+  ${money("keep","Keep free per check while paying off",S.keepFree||0)}<p class="hint" style="margin-top:-8px">Spending money held back from each check. $0 sends everything to the buffer and card.</p>
+  ${actions("Save")}</form>`,fd=>{S.bufferTarget=num(fd.get("target"))||S.bufferTarget;S.order=order;S.useBuffer=!!fd.get("usebuf");S.keepFree=num(fd.get("keep"));saveSettings();closeSheet();render();toast("Saved");});
+  let order=S.order;const f=$("#sheetroot form");F(f,"usebuf").addEventListener("change",()=>{$("#bufopts").hidden=!F(f,"usebuf").checked;});
   $("#ord").addEventListener("click",e=>{const b=e.target.closest("[data-o]");if(!b)return;order=b.dataset.o;$("#ord").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));});
 }
+function sheetCat(id){
+  const c=id?S.cats.find(x=>x.id===id):{name:"",limit:0};if(!c)return;
+  openSheet(`<h3>${id?"Edit category":"Add category"}</h3><form>
+   <div class="field"><label for="name">Name</label><input id="name" name="name" value="${esc(c.name)}" placeholder="Coffee" autocomplete="off" maxlength="40"></div>
+   ${money("limit","Limit per pay period (optional)",c.limit||null)}<p class="hint" style="margin-top:-8px">Leave empty for no limit. You'll see a warning near and over it.</p>
+   <p class="err" id="err" hidden style="color:var(--bad);margin:0;font-size:13px"></p>
+   ${actions(id?"Save":"Add",id?"Delete":null)}</form>`,fd=>{
+    const name=String(fd.get("name")||"").trim();if(!name){const e=$("#err");e.textContent="Give the category a name.";e.hidden=false;return;}
+    const nc={id:id||uid(),name,limit:num(fd.get("limit"))};S.cats=id?S.cats.map(x=>x.id===id?nc:x):[...S.cats,nc];saveSettings();closeSheet();render();toast(id?"Saved":"Category added");},
+  act=>{if(act==="del"){S.cats=S.cats.filter(x=>x.id!==id);saveSettings();closeSheet();render();toast("Category deleted. Its purchases show as Uncategorized.");}});
+}
+function sheetGoal(id){
+  const g=id?S.goals.find(x=>x.id===id):{name:"",target:""};if(!g)return;
+  openSheet(`<h3>${id?"Edit goal":"Add a savings goal"}</h3><form>
+   <div class="field"><label for="name">What are you saving for?</label><input id="name" name="name" value="${esc(g.name)}" placeholder="Vacation" autocomplete="off" maxlength="40"></div>
+   ${money("target","Goal amount",g.target===""?null:g.target)}
+   <p class="err" id="err" hidden style="color:var(--bad);margin:0;font-size:13px"></p>
+   ${actions(id?"Save":"Add",id?"Delete":null)}</form>`,fd=>{
+    const name=String(fd.get("name")||"").trim();const target=num(fd.get("target"));const err=m=>{const e=$("#err");e.textContent=m;e.hidden=false;};
+    if(!name)return err("Give the goal a name.");if(target<=0)return err("Enter a goal amount above $0.");
+    const ng={id:id||uid(),name,target};S.goals=id?S.goals.map(x=>x.id===id?ng:x):[...S.goals,ng];saveSettings();closeSheet();render();toast(id?"Saved":"Goal added");},
+  act=>{if(act==="del"){S.goals=S.goals.filter(x=>x.id!==id);const gs={...B.goals};delete gs[id];B.goals=gs;saveSettings();saveBal();closeSheet();render();toast("Goal deleted. Your savings balance didn't change.");}});
+}
+function sheetGoalAdd(id){
+  const g=S.goals.find(x=>x.id===id);if(!g)return;let src="have";const cur=B.goals[id]||0;
+  openSheet(`<h3>${esc(g.name)}</h3><p class="hint">${fmt(cur,true)} saved of ${fmt(g.target)}.</p><form>
+   ${money("amt","Amount",null,true)}
+   <div class="field"><span class="flabel">Where's it from?</span><div class="chips" id="src"><button type="button" data-v="have" aria-pressed="true">Savings I already have</button><button type="button" data-v="new" aria-pressed="false">New money</button><button type="button" data-v="out" aria-pressed="false">Take money out</button></div>
+   <p class="hint" id="srch"></p></div>
+   <p class="err" id="err" hidden style="color:var(--bad);margin:0;font-size:13px"></p>
+   ${actions("Save")}</form>`,fd=>{
+    const a=num(fd.get("amt"));if(a<=0){const e=$("#err");e.textContent="Enter an amount above $0.";e.hidden=false;return;}
+    const gs={...B.goals};
+    if(src==="out"){const take=Math.min(a,cur);gs[id]=r2(cur-take);B.savings=r2(Math.max(0,B.savings-take));logBal("goal",-take,`Took ${fmt(take,true)} out of ${g.name}`);}
+    else{gs[id]=r2(cur+a);if(src==="new"){B.savings=r2(B.savings+a);}logBal("goal",a,`Added to ${g.name}${src==="new"?" (new money)":""}`);}
+    B.goals=gs;saveBal();closeSheet();render();toast("Goal updated");});
+  const hint={have:"Sets aside money already in your savings. Your savings balance stays the same.",new:"Adds new money to this goal and to your savings balance.",out:"Takes money out of this goal and your savings balance, for when you spend it."};
+  const u=()=>{$("#srch").textContent=hint[src];};u();
+  $("#src").addEventListener("click",e=>{const b=e.target.closest("[data-v]");if(!b)return;src=b.dataset.v;$("#src").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));u();});
+}
+function applyIncome(x,sg){
+  if(x.use==="save"){B.savings=r2(B.savings+sg*x.amount);logBal("income",sg*x.amount,sg>0?`Extra income saved: ${x.note||"income"}`:"Removed extra income");saveBal();}
+  if(x.use==="card"){B.card=r2(Math.max(0,B.card-sg*x.amount));logBal("payment",-sg*x.amount,sg>0?`Extra income to card: ${x.note||"income"}`:"Removed extra income payment");saveBal();}
+}
+function sheetIncome(id){
+  let found=null,fi=null;if(id)DATES.forEach((d,i)=>{const x=(per(i).income||[]).find(y=>y.id===id);if(x){found=x;fi=i;}});
+  const pay=isPayoff();const x=found||{amount:"",note:"",date:iso(new Date()),use:"spend"};let use=(x.use==="card"&&!pay)?"spend":x.use;
+  openSheet(`<h3>${found?"Edit extra income":"Add extra income"}</h3><p class="hint">Money outside your regular paycheck, like a bonus, side job or refund.</p><form>
+   ${money("amount","Amount",x.amount===""?null:x.amount,true)}
+   <div class="field"><label for="note">From</label><input id="note" name="note" value="${esc(x.note)}" placeholder="Bonus, side job, refund" autocomplete="off"></div>
+   <div class="field"><span class="flabel">Use it to</span><div class="chips" id="use"><button type="button" data-v="spend" aria-pressed="${use==="spend"}">Spend it</button><button type="button" data-v="save" aria-pressed="${use==="save"}">Save it</button>${pay?`<button type="button" data-v="card" aria-pressed="${use==="card"}">Pay the card</button>`:""}</div></div>
+   <div class="field"><label for="date">Date</label><input id="date" name="date" type="date" value="${x.date}"></div>
+   <p class="err" id="err" hidden style="color:var(--bad);margin:0;font-size:13px"></p>
+   ${actions(found?"Save":"Add",found?"Delete":null)}</form>`,fd=>{
+    const amount=num(fd.get("amount"));if(amount<=0){const e=$("#err");e.textContent="Enter an amount above $0.";e.hidden=false;return;}
+    if(found){applyIncome(found,-1);P[pid(fi)]={...per(fi),income:(per(fi).income||[]).filter(y=>y.id!==found.id)};savePer(fi);}
+    const date=fd.get("date")||iso(new Date());const ti=idxForDate(fromIso(date));
+    const nx={id:found?found.id:uid(),amount,note:String(fd.get("note")||"").trim(),date,use};
+    P[pid(ti)]={...per(ti),income:[...(per(ti).income||[]),nx]};applyIncome(nx,1);savePer(ti);closeSheet();render();toast(found?"Saved":`Added ${fmt(amount,true)}. ${USE[use]}.`);},
+  act=>{if(act==="del"&&found){applyIncome(found,-1);P[pid(fi)]={...per(fi),income:(per(fi).income||[]).filter(y=>y.id!==found.id)};savePer(fi);closeSheet();render();toast("Deleted");}});
+  $("#use").addEventListener("click",e=>{const b=e.target.closest("[data-v]");if(!b)return;use=b.dataset.v;$("#use").querySelectorAll("button").forEach(y=>y.setAttribute("aria-pressed",y===b));});
+}
+// ---------- export, backup, restore ----------
+async function saveFile(name,text,mime){
+  try{if(window.claude&&typeof window.claude.use==="function"){const d=await window.claude.use("downloads");
+    if(d){await d.save({filename:name,data:text});toast("Saved");return;}}}
+  catch(e){if(e&&e.code==="declined")return;if(e&&e.code==="rate_limited"){toast("A save is already waiting for you. Finish that one first.");return;}}
+  try{const url=URL.createObjectURL(new Blob([text],{type:mime}));const a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);}
+  catch(e){toast("Couldn't download the file here. Try opening the app in your browser.");}
+}
+function exportCsv(){
+  const q=v=>{const t=String(v??"");return /[",\n]/.test(t)?`"${t.replace(/"/g,'""')}"`:t;};
+  const rows=[];for(const [id,p] of Object.entries(P)){const per_=id.slice(1);
+    for(const t of (p.tx||[]))rows.push([t.date,per_,"Spending",catName(t.cat),t.method==="card"?"Credit card":"Debit/cash",-t.amount,t.note]);
+    for(const x of (p.income||[]))rows.push([x.date,per_,"Extra income",USE[x.use]||"","",x.amount,x.note]);}
+  if(!rows.length){toast("Nothing to export yet. Log some spending first.");return;}
+  rows.sort((a,b)=>a[0].localeCompare(b[0]));
+  const csv=[["Date","Pay period starting","Type","Category","Paid with","Amount","Note"],...rows].map(r=>r.map(q).join(",")).join("\n");
+  saveFile(`budget-spending-${iso(new Date())}.csv`,csv,"text/csv");
+}
+function backup(){saveFile(`budget-backup-${iso(new Date())}.json`,JSON.stringify({app:"budget-tracker",version:2,exported:new Date().toISOString(),settings:S,balances:B,periods:P},null,1),"application/json");}
+function sheetRestore(){
+  openSheet(`<h3>Restore a backup</h3><p class="hint">Pick a backup file you saved from this app. It replaces everything here, including your bills, balances and spending.</p>
+  <form><div class="field"><label for="file">Backup file</label><input type="file" id="file" name="file" accept=".json,application/json"></div>
+  <p class="err" id="err" hidden style="color:var(--bad);margin:0;font-size:13px"></p>${actions("Replace everything")}</form>`,async (fd,f)=>{
+    const err=m=>{const e=$("#err");e.textContent=m;e.hidden=false;};const file=F(f,"file").files&&F(f,"file").files[0];if(!file)return err("Choose a backup file first.");
+    let data;try{data=JSON.parse(await file.text());}catch(e){return err("That file isn't a backup from this app. Pick a .json file you saved with Back up.");}
+    if(!data||data.app!=="budget-tracker"||!data.settings)return err("That file isn't a backup from this app. Pick a .json file you saved with Back up.");
+    const old=Object.keys(P);S=normSettings(data.settings);B=normBal(data.balances);P=data.periods&&typeof data.periods==="object"?data.periods:{};
+    saveSettings();saveBal();for(const id of Object.keys(P))write("periods/"+id,P[id]);
+    if(mode==="db")for(const id of old)if(!P[id])DB.doc("periods/"+id).delete().catch(()=>{});
+    buildDates();ui.idx=CUR;closeSheet();render();toast("Backup restored");});
+}
+function setMode(m){if(S.budgetMode===m)return;S.budgetMode=m;if(m==="payoff"&&!(B.cardStart>=B.card)){B.cardStart=B.card;saveBal();}saveSettings();render();toast(m==="payoff"?"Card payoff mode on":"General budget mode on");}
 function sheetBill(id){
   const b=id?S.bills.find(x=>x.id===id):{name:"",amount:"",day:1,variable:false};
   const opts=`<option value="each" ${b.day==="each"?"selected":""}>Every check</option>`+Array.from({length:31},(_,k)=>k+1).map(d=>`<option value="${d}" ${b.day===d?"selected":""}>${dayLabel(d)} of the month</option>`).join("");
@@ -645,13 +897,12 @@ function sheetBill(id){
 
 function sheetGuide(){
   openSheet(`<h3>How this app works</h3><div class="guide">
-   <h4>The idea</h4><p>Every paycheck has a job. It covers the bills that charge before your next payday, then the rest goes to your goals in order: your buffer, your credit card, then savings. Whatever is left is free to spend, guilt-free.</p>
-   <h4>Paycheck tab</h4><p>Shows one paycheck at a time; use the arrows to look back or ahead. The colored bar shows where every dollar goes. When the money lands, tap <b>My paycheck landed</b>, make each transfer in your bank app, then tick it off. Ticking updates the balances in this app, it never moves real money.</p>
-   <h4>Buffer</h4><p>Emergency cash kept in a separate savings account, so a surprise bill never ends up on the credit card. It fills to your target first. Don't want one? Turn it off in Setup, under Split, and that money goes straight to the card.</p>
-   <h4>Payoff mode</h4><p>While the buffer is filling or the card has a balance, everything left after bills goes to them (minus any "keep free" amount you set). Once both are done, your normal savings % takes over.</p>
-   <h4>Spending tab</h4><p>Log anything that isn't a bill. Mark it debit or credit card. Card purchases get added to your card balance, and the app reminds you to send that cash to the card.</p>
-   <h4>Card tab</h4><p>Your card balance, buffer and savings, plus a forecast of when the card hits $0. If a number drifts from your bank or card app, tap Update and type the real one.</p>
-   <h4>Setup tab</h4><p>Your paycheck, paydays, bills, split percentages, buffer target and color theme. Change anything and the plan recalculates right away.</p>
+   <h4>The idea</h4><p>Every paycheck has a job. It covers the bills that charge before your next payday, then the rest goes where you've told it to. Whatever is left is free to spend, guilt-free.</p>
+   <h4>Two budget modes</h4><p><b>General budget</b> splits each check into bills, savings and spending using your percentages, like 50/30/20. The credit card isn't part of the plan. <b>Card payoff</b> sends everything left after bills to an optional emergency buffer, then your credit card, until it's paid off, then goes back to your normal split. Switch in Setup any time.</p>
+   <h4>Paycheck tab</h4><p>Shows one paycheck at a time; use the arrows to look back or ahead. The colored bar shows where every dollar goes. When the money lands, tap <b>My paycheck landed</b>, make each transfer in your bank app, then tick it off. Ticking updates the balances in this app; it never moves real money. Add bonuses or side money under <b>Extra income</b>.</p>
+   <h4>Spending tab</h4><p>Log anything that isn't a bill and pick a category. <b>Where it went</b> breaks your spending down by category for the pay period or the month, warns you near any limits, and shows how you compare to last time.</p>
+   <h4>${isPayoff()?"Card":"Savings"} tab</h4><p>${isPayoff()?"Your card balance, buffer and savings, a forecast of when the card hits $0, and your savings goals.":"Your savings balance and savings goals."} If a number drifts from your bank, tap Update and type the real one.</p>
+   <h4>Setup tab</h4><p>Your mode, paycheck, split, bills, spending categories and limits, and color theme. You can also export your spending to a spreadsheet or back everything up.</p>
   </div><div class="row2" style="margin-top:16px"><button type="button" class="btn" data-sact="close">Got it</button></div>`);
 }
 // ---------- actions ----------
@@ -667,7 +918,7 @@ document.addEventListener("click",e=>{
   if(sc){if(e.target.id==="scrim"){closeSheet();return;}const sa=e.target.closest("[data-sact]");if(sa){if(sa.dataset.sact==="close")closeSheet();else if(sheet&&sheet.onClick)sheet.onClick(sa.dataset.sact);}return;}
   const tb=e.target.closest("[data-tab]");if(tb){ui.tab=tb.dataset.tab;try{history.replaceState(null,"","#"+ui.tab);}catch(_){}window.scrollTo(0,0);render();return;}
   const a=e.target.closest("[data-act]");if(!a||a.disabled)return;
-  if(readOnly&&!["prev","next","help","guide","introok","accent","mode"].includes(a.dataset.act)){toast("You can view this budget but not change it.");return;}
+  if(readOnly&&!["prev","next","help","guide","introok","accent","mode","sview","exportcsv","backup"].includes(a.dataset.act)){toast("You can view this budget but not change it.");return;}
   const act=a.dataset.act;
   if(act==="prev"){ui.idx=Math.max(0,ui.idx-1);render();}
   else if(act==="next"){ui.idx=Math.min(DATES.length-2,ui.idx+1);render();}
@@ -688,6 +939,17 @@ document.addEventListener("click",e=>{
   else if(act==="editpay")sheetPay();
   else if(act==="editsplit")sheetSplit();
   else if(act==="editbill")sheetBill(a.dataset.id||null);
+  else if(act==="setmode")setMode(a.dataset.v);
+  else if(act==="sview"){ui.sview=a.dataset.v;render();}
+  else if(act==="editpayoff")sheetPayoff();
+  else if(act==="editcat")sheetCat(a.dataset.id||null);
+  else if(act==="editgoal")sheetGoal(a.dataset.id||null);
+  else if(act==="goaladd")sheetGoalAdd(a.dataset.id);
+  else if(act==="addinc")sheetIncome(null);
+  else if(act==="editinc")sheetIncome(a.dataset.id);
+  else if(act==="exportcsv")exportCsv();
+  else if(act==="backup")backup();
+  else if(act==="restore")sheetRestore();
 });
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&sheet)closeSheet();});
 let tt;function toast(m){$("#toastroot").innerHTML=`<div class="toast" role="status">${esc(m)}</div>`;clearTimeout(tt);tt=setTimeout(()=>{$("#toastroot").innerHTML="";},2600);}
