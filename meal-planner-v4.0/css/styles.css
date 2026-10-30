@@ -269,6 +269,7 @@ a { color: var(--accent); }
 .btn-primary { background: var(--accent); color: var(--accent-text); }
 .btn-primary:active { background: var(--accent-strong); }
 .btn-danger { background: var(--danger); color: #fff; }
+.btn-planned { background: var(--accent-soft); color: var(--accent-ink); }
 .btn-ghost { background: transparent; color: var(--muted); }
 .btn-danger-ghost { background: var(--danger-soft); color: var(--danger); }
 .btn-block { width: 100%; }
@@ -678,6 +679,23 @@ a { color: var(--accent); }
 .cta-title { font-weight: 700; }
 .cta-sub { font-size: 0.85rem; opacity: 0.85; }
 
+.newweek-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 14px;
+  padding: 14px;
+  border: 0;
+  border-radius: var(--r);
+  background: none;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+.newweek-link strong { color: var(--accent); font-weight: 650; }
+.newweek-link:active { background: var(--surface-2); }
+
 /* ------------------------------------------------------------ groceries */
 
 .progress-card { padding: 16px; }
@@ -870,7 +888,7 @@ a { color: var(--accent); }
   color: var(--accent-ink);
   font-weight: 600;
 }
-.done-banner .link { display: block; margin: 4px auto 0; color: var(--accent-ink); text-decoration: underline; }
+.done-banner .btn { margin-top: 12px; }
 
 /* --------------------------------------------------------------- tab bar */
 
@@ -1247,6 +1265,21 @@ dialog::backdrop {
 .menu-text { flex: 1; display: grid; font-weight: 520; }
 .menu-text small { font-size: 0.8rem; color: var(--muted); font-weight: 450; }
 .menu-danger, .menu-danger > .ic { color: var(--danger); }
+.menu-item .chev { width: 18px; height: 18px; color: var(--faint); }
+.menu-item input.switch:disabled { opacity: 0.4; }
+.menu-item:has(input:disabled) .menu-text { color: var(--muted); }
+
+.tip {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--r-lg);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+.tip .ic { flex: none; margin-top: 1px; }
 
 .segmented[role='radiogroup'] { margin-bottom: 0; }
 
@@ -1322,8 +1355,11 @@ dialog::backdrop {
 
 .toast {
   position: fixed;
-  left: 50%;
-  bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 14px);
+  inset: auto auto calc(var(--tabbar-h) + var(--safe-bottom) + 14px) 50%;
+  margin: 0;
+  border: 0;
+  overflow: visible;
+  width: max-content;
   z-index: 50;
   display: flex;
   align-items: center;
@@ -1363,3 +1399,14 @@ dialog::backdrop {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Popovers are hidden by the browser until shown; ours is shown from JS. */
+.toast:popover-open { display: flex; }
+
+/* ------------------------------------------------ old Safari (no <dialog>) */
+
+.no-dialog dialog:not([open]) { display: none; }
+.no-dialog dialog[open] { position: fixed; z-index: 40; }
+.no-dialog .sheet[open] { box-shadow: 0 0 0 100vmax var(--scrim), var(--shadow-lg); }
+.no-dialog .alert[open] { inset: 0; margin: auto; height: fit-content; z-index: 45; box-shadow: 0 0 0 100vmax var(--scrim); }
+.menu-item[hidden] + .menu-item { border-top: 0; }
