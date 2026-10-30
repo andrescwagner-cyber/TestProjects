@@ -14,10 +14,10 @@
  *    thumb mid-shop.
  */
 
-import * as store from './store.js';
-import * as g from './grocery.js';
-import { AISLES, AISLE_SEASONINGS, AISLE_HOUSEHOLD } from './data.js';
-import { CATEGORIES } from './recipes.js';
+import * as store from './store.js?v=4.1';
+import * as g from './grocery.js?v=4.1';
+import { AISLES, AISLE_SEASONINGS, AISLE_HOUSEHOLD } from './data.js?v=4.1';
+import { CATEGORIES } from './recipes.js?v=4.1';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
@@ -141,38 +141,64 @@ const isCollapsed = (id) => prefs[id] === true;
 // ---------------------------------------------------------------------------
 
 let toastTimer = null;
-let toastUndo = null;
+let toastAction = null;
 
 /**
+ * Show a short message. The toast is a popover, so it sits in the top layer
+ * above any open sheet; otherwise a sheet's backdrop would cover it and its
+ * Undo button couldn't be tapped.
+ *
  * @param {string} message
- * @param {{undo?: string}} [options] undo: a store.snapshot() to restore
+ * @param {{undo?: string, action?: {label: string, run: Function}, sticky?: boolean}} [options]
+ *   undo: a store.snapshot() to restore. action: any other button.
  */
 function toast(message, options = {}) {
   const el = $('#toast');
   $('#toast-text').textContent = message;
-  toastUndo = options.undo || null;
-  $('#toast-action').hidden = !toastUndo;
+  if (options.undo) {
+    const snap = options.undo;
+    toastAction = {
+      label: 'Undo',
+      run: () => {
+        if (store.restoreSnapshot(snap)) {
+          renderAll();
+          refreshOpenSheets();
+          toast('Undone');
+        }
+      },
+    };
+  } else {
+    toastAction = options.action || null;
+  }
+  const btn = $('#toast-action');
+  btn.hidden = !toastAction;
+  if (toastAction) btn.textContent = toastAction.label;
+
   el.hidden = false;
+  if (el.showPopover) {
+    // Re-showing moves it to the top of the top layer, above a sheet opened since.
+    if (el.matches(':popover-open')) el.hidePopover();
+    el.showPopover();
+  }
   // Restart the entrance animation for back-to-back toasts.
   el.style.animation = 'none';
   void el.offsetWidth;
   el.style.animation = '';
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(hideToast, toastUndo ? 5000 : 2400);
+  if (!options.sticky) toastTimer = setTimeout(hideToast, toastAction ? 5000 : 2400);
 }
 
 function hideToast() {
-  $('#toast').hidden = true;
-  toastUndo = null;
+  const el = $('#toast');
+  if (el.hidePopover && el.matches(':popover-open')) el.hidePopover();
+  el.hidden = true;
+  toastAction = null;
 }
 
 $('#toast-action').addEventListener('click', () => {
-  if (toastUndo && store.restoreSnapshot(toastUndo)) {
-    renderAll();
-    refreshOpenSheets();
-    hideToast();
-    toast('Undone');
-  }
+  const action = toastAction;
+  hideToast();
+  if (action) action.run();
 });
 
 // ---------------------------------------------------------------------------
@@ -189,7 +215,7 @@ function confirmAction({ title, text, yes = 'Delete', danger = true }) {
     yesBtn.className = `btn ${danger ? 'btn-danger' : 'btn-primary'}`;
 
     const done = (answer) => {
-      dialog.close();
+      hideDialog(dialog);
       yesBtn.removeEventListener('click', onYes);
       $('#confirm-no').removeEventListener('click', onNo);
       dialog.removeEventListener('cancel', onNo);
@@ -203,7 +229,7 @@ function confirmAction({ title, text, yes = 'Delete', danger = true }) {
     yesBtn.addEventListener('click', onYes);
     $('#confirm-no').addEventListener('click', onNo);
     dialog.addEventListener('cancel', onNo);
-    dialog.showModal();
+    showDialog(dialog);
   });
 }
 
@@ -211,16 +237,63 @@ function confirmAction({ title, text, yes = 'Delete', danger = true }) {
 // Sheets
 // ---------------------------------------------------------------------------
 
+/**
+ * iOS Safari ignores overflow:hidden on <body>, so the page behind a sheet
+ * would still scroll. Pinning the body in place (and restoring the scroll
+ * position afterwards) is the reliable way to freeze it.
+ */
+let lockedScrollY = null;
+
 function syncScrollLock() {
-  document.body.style.overflow = $$('dialog.sheet[open]').length ? 'hidden' : '';
+  const anyOpen = $$('dialog.sheet[open]').length > 0;
+  const body = document.body;
+  if (anyOpen && lockedScrollY === null) {
+    lockedScrollY = window.scrollY;
+    body.style.position = 'fixed';
+    body.style.top = `-${lockedScrollY}px`;
+    body.style.left = '0';
+    body.style.right = '0';
+  } else if (!anyOpen && lockedScrollY !== null) {
+    body.style.position = '';
+    body.style.top = '';
+    body.style.left = '';
+    body.style.right = '';
+    window.scrollTo(0, lockedScrollY);
+    lockedScrollY = null;
+  }
+}
+
+/** Safari before 15.4 has no <dialog>; fall back to a plain shown element. */
+const hasDialog = typeof HTMLDialogElement === 'function' && 'showModal' in HTMLDialogElement.prototype;
+if (!hasDialog) document.documentElement.classList.add('no-dialog');
+
+function showDialog(dialog) {
+  if (dialog.open) return;
+  if (hasDialog) dialog.showModal();
+  else dialog.setAttribute('open', '');
+}
+
+function hideDialog(dialog) {
+  if (hasDialog) dialog.close();
+  else dialog.removeAttribute('open');
 }
 
 function openSheet(dialog) {
-  if (!dialog.open) dialog.showModal();
+  // Only one sheet at a time, except detail → edit, which stacks on purpose.
+  $$('dialog.sheet[open]').forEach((other) => {
+    if (other !== dialog && !(other.id === 'sheet-recipe' && dialog.id === 'sheet-edit')) {
+      other.classList.remove('is-closing');
+      other.style.transform = '';
+      hideDialog(other);
+    }
+  });
+  showDialog(dialog);
   // showModal focuses the first button, which paints a focus ring on touch
   // devices. Focus the sheet itself instead; Tab still moves into it.
   dialog.focus({ preventScroll: true });
   syncScrollLock();
+  // A toast showing when the sheet opened would now sit under it.
+  if ($('#toast').matches?.(':popover-open')) hideToast();
 }
 
 function closeSheet(dialog) {
@@ -229,7 +302,7 @@ function closeSheet(dialog) {
   setTimeout(() => {
     dialog.classList.remove('is-closing');
     dialog.style.transform = '';
-    dialog.close();
+    hideDialog(dialog);
     syncScrollLock();
   }, 200);
 }
@@ -324,6 +397,7 @@ document.addEventListener('click', (event) => {
   if (event.target.closest('[data-open-picker]')) openPicker();
   if (event.target.closest('[data-surprise]')) openSurprise();
   if (event.target.closest('[data-new-recipe]')) openEditor(null);
+  if (event.target.closest('[data-new-week]')) openNewWeek();
 });
 
 function updateBadges() {
@@ -509,8 +583,8 @@ function renderDetail() {
     </div>
     ${r.description ? `<p class="rd-desc">${esc(r.description)}</p>` : ''}
     <div class="rd-actions">
-      <button class="btn ${planned ? '' : 'btn-primary'}" type="button" data-rd="plan">
-        ${icon(planned ? 'check' : 'plus', 'ic-sm')}${planned ? 'In this week’s plan' : 'Add to this week'}
+      <button class="btn ${planned ? 'btn-planned' : 'btn-primary'}" type="button" data-rd="plan" aria-pressed="${planned}">
+        ${planned ? `${icon('check', 'ic-sm')}Planned · tap to remove` : `${icon('plus', 'ic-sm')}Add to this week`}
       </button>
       <button class="btn rd-icon-btn ${r.favorite ? 'is-star' : ''}" type="button" data-rd="fav"
         aria-pressed="${r.favorite}" aria-label="${r.favorite ? 'Remove from favorites' : 'Add to favorites'}">${icon('star')}</button>
@@ -801,6 +875,7 @@ function renderPlan() {
   $('#plan-empty').hidden = total === 0 || plan.length > 0;
   $('#btn-add-meals').hidden = plan.length === 0;
   $('#plan-cta').hidden = plan.length === 0;
+  $('#plan-newweek').hidden = plan.length === 0 && !store.countHousehold();
 
   if (!plan.length) {
     $('#plan-days').innerHTML = '';
@@ -1281,16 +1356,51 @@ $('#btn-uncheck').addEventListener('click', () => {
   toast('All items unticked', { undo });
 });
 
-function startNewWeek() {
-  const undo = store.snapshot();
-  store.resetWeek();
-  $$('dialog.sheet[open]').forEach(closeSheet);
-  renderAll();
-  toast('Ready for a new week', { undo });
+// --- start a new week ---
+
+function openNewWeek() {
+  const week = store.getWeek();
+  const meals = week.selected.length;
+  const added = week.household.length;
+  $('#nw-meals').checked = true;
+  $('#nw-added').checked = true;
+  $('#nw-meals-text').textContent = meals
+    ? `${plural(meals, 'meal')} planned. Turn off to keep them for next week.`
+    : 'Nothing planned right now';
+  $('#nw-added-text').textContent = added
+    ? `${plural(added, 'item')}, like ${g.shortLabel(g.prettyName(week.household[0].name), 20)}. Turn off to keep staples on the list.`
+    : 'Nothing added right now';
+  // Only offer choices that apply: no switch for things that aren't there.
+  $('#nw-meals').disabled = !meals;
+  $('#nw-added').disabled = !added;
+  $('#nw-meals-row').hidden = !meals;
+  $('#nw-added-row').hidden = !added;
+  $('#nw-options').hidden = !meals && !added;
+  syncNewWeekButton();
+  openSheet($('#sheet-newweek'));
 }
 
-$('#btn-reset').addEventListener('click', startNewWeek);
-$('#btn-newweek-inline').addEventListener('click', startNewWeek);
+function syncNewWeekButton() {
+  const clearMeals = $('#nw-meals').checked && !$('#nw-meals').disabled;
+  const clearAdded = $('#nw-added').checked && !$('#nw-added').disabled;
+  $('#btn-do-newweek').textContent = clearMeals || clearAdded ? 'Start fresh' : 'Just untick everything';
+}
+
+$('#nw-meals').addEventListener('change', syncNewWeekButton);
+$('#nw-added').addEventListener('change', syncNewWeekButton);
+
+$('#btn-do-newweek').addEventListener('click', () => {
+  const undo = store.snapshot();
+  store.resetWeek({
+    keepMeals: !$('#nw-meals').checked,
+    keepAdded: !$('#nw-added').checked,
+  });
+  closeSheet($('#sheet-newweek'));
+  renderAll();
+  // Land where the next step happens: picking meals, unless they were kept.
+  showTab(store.getWeek().selected.length ? 'list' : 'plan');
+  toast('New week started', { undo });
+});
 
 // --- keep the screen awake while shopping ---
 
@@ -1343,11 +1453,30 @@ function applyTheme(theme) {
   });
 }
 
+const isStandalone = () =>
+  window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
 function openSettings() {
-  const missing = store.libraryCount() - store.listRecipes().filter((r) => r.description).length;
+  const missing = store.missingLibraryCount();
   $('#seed-more').hidden = missing <= 0;
-  $('#seed-more-text').textContent = `${store.libraryCount()} recipes across ${CATEGORIES.length} categories; only the ones you don't have are added`;
+  $('#seed-more-text').textContent = `${plural(missing, 'recipe')} from the built-in collection you don't have`;
   $('#backup-status').hidden = true;
+
+  const week = store.getWeek();
+  const items = currentItems().length;
+  $('#st-week-text').textContent = week.selected.length || items
+    ? `${plural(week.selected.length, 'meal')} and ${plural(items, 'item')} on the list now`
+    : 'Nothing planned yet';
+
+  // Installing to the home screen keeps the data safe from Safari's
+  // seven-day clean-up, so nudge anyone still using it in a browser tab.
+  $('#install-tip').hidden = isStandalone();
+  $('#install-text').innerHTML = isIOS()
+    ? 'In Safari, tap <strong>Share</strong> then <strong>Add to Home Screen</strong>. It opens full screen and your recipes are kept safe.'
+    : 'In your browser menu, choose <strong>Install app</strong> or <strong>Add to Home screen</strong>.';
+
   applyTheme(prefs.theme);
   openSheet($('#sheet-settings'));
 }
@@ -1364,13 +1493,30 @@ $('#btn-seed-more').addEventListener('click', () => {
   closeSheet($('#sheet-settings'));
 });
 
-$('#btn-export').addEventListener('click', () => {
+$('#btn-export').addEventListener('click', async () => {
   const stamp = new Date().toISOString().slice(0, 10);
-  const blob = new Blob([store.exportJson()], { type: 'application/json' });
+  const name = `meal-planner-backup-${stamp}.json`;
+  const json = store.exportJson();
+
+  // On phones, hand the file to the share sheet (Save to Files, Mail,
+  // AirDrop…). A plain download link inside an iPhone home-screen app opens
+  // the raw file full screen with no way back to the app.
+  try {
+    const file = new File([json], name, { type: 'application/json' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: 'Meal planner backup' });
+      setStatus($('#backup-status'), 'ok', `Backup shared as <strong>${esc(name)}</strong>. Keep it somewhere safe, like Files or your email.`);
+      return;
+    }
+  } catch (err) {
+    if (err && err.name === 'AbortError') return; // closed the share sheet
+  }
+
+  const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `meal-planner-backup-${stamp}.json`;
+  link.download = name;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -1378,7 +1524,7 @@ $('#btn-export').addEventListener('click', () => {
   setStatus(
     $('#backup-status'),
     'ok',
-    `Saved <strong>meal-planner-backup-${stamp}.json</strong>. Email it to yourself to keep it safe.`,
+    `Saved <strong>${esc(name)}</strong> to your downloads. Email it to yourself to keep it safe.`,
   );
 });
 
@@ -1449,6 +1595,23 @@ function init() {
   store.requestPersistence();
 
   if ('serviceWorker' in navigator) {
+    // When an update takes over, reload into it: straight away if the app was
+    // only just opened, otherwise offer it, so nobody loses what they're doing.
+    const hadController = Boolean(navigator.serviceWorker.controller);
+    const openedAt = Date.now();
+    let reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController || reloading) return;
+      if (Date.now() - openedAt < 8000 && !$$('dialog[open]').length) {
+        reloading = true;
+        window.location.reload();
+      } else {
+        toast('A new version is ready', {
+          sticky: true,
+          action: { label: 'Refresh', run: () => window.location.reload() },
+        });
+      }
+    });
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('sw.js').catch(() => {
         /* offline support is a bonus, not a requirement */

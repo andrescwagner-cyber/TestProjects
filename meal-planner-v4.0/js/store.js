@@ -22,8 +22,8 @@
  *   }
  */
 
-import { parseIngredient, itemKey, AISLE_SEASONINGS, AISLE_HOUSEHOLD, AISLES } from './grocery.js';
-import { RECIPE_LIBRARY, CATEGORIES } from './recipes.js';
+import { parseIngredient, itemKey, AISLE_SEASONINGS, AISLE_HOUSEHOLD, AISLES } from './grocery.js?v=4.1';
+import { RECIPE_LIBRARY, CATEGORIES } from './recipes.js?v=4.1';
 
 export { CATEGORIES };
 
@@ -309,6 +309,16 @@ export function seedSampleRecipes(category) {
   return added;
 }
 
+/** How many built-in recipes are not in the collection (matched by title). */
+export function missingLibraryCount() {
+  const existing = new Set(state.recipes.map((r) => r.title.trim().toLowerCase()));
+  return RECIPE_LIBRARY.filter((r) => !existing.has(r.title.trim().toLowerCase())).length;
+}
+
+export function countHousehold() {
+  return state.week.household.length;
+}
+
 /** How many built-in recipes exist in total. */
 export function libraryCount() {
   return RECIPE_LIBRARY.length;
@@ -464,12 +474,19 @@ export function removeHouseholdItem(index) {
   }
 }
 
-/** Start a new week: clear the plan, the extras and every checkbox. */
-export function resetWeek() {
-  state.week.selected = [];
+/**
+ * Start a new week. Ticks are always cleared; the plan and the items you
+ * added yourself are cleared unless asked to keep them (keeping added items
+ * lets weekly staples like milk and eggs roll over). Recipes, favorites and
+ * the people/leftovers numbers are never touched.
+ */
+export function resetWeek({ keepMeals = false, keepAdded = false } = {}) {
+  if (!keepMeals) {
+    state.week.selected = [];
+    state.week.days = {};
+  }
+  if (!keepAdded) state.week.household = [];
   state.week.checked = {};
-  state.week.days = {};
-  state.week.household = [];
   persist();
 }
 

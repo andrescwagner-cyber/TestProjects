@@ -31,7 +31,7 @@ import {
   SIZE_WORDS,
   UNICODE_FRACTIONS,
   SERIES_COUNT,
-} from './data.js';
+} from './data.js?v=4.1';
 
 const NOISE = new Set(NOISE_WORDS);
 const SIZES = new Set(SIZE_WORDS);
