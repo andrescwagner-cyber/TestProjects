@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="description" content="Weekly meal planner and dynamic grocery list that works offline on your phone." />
+<title>Meals</title>
+
+<!-- Installable-app plumbing: lets iOS/Android run this full-screen from the home screen. -->
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="theme-color" content="#f7f6f3" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#0f0f0e" media="(prefers-color-scheme: dark)" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Meals" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="icons/icon-192.png" sizes="192x192" />
+<link rel="stylesheet" href="css/styles.css" />
+<script>
+  // Apply the saved theme before first paint, so dark-mode users never see a white flash.
+  try {
+    var t = JSON.parse(localStorage.getItem('mealPlanner.ui') || '{}').theme;
+    if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+  } catch (e) {}
+</script>
+</head>
+<body>
+
+<!-- Icon set: one sprite, referenced with <use href="#i-name">. Stroke icons, 24px grid. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 2.8l2.85 5.78 6.38.93-4.62 4.5 1.09 6.35L12 17.36l-5.7 3 1.09-6.35-4.62-4.5 6.38-.93z"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M20 7h-9M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></symbol>
+    <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l6.1-8.6c.7-1.1 2-1.7 3.3-1.7H22"/><path d="m18 2 4 4-4 4"/><path d="M2 6h1.9c1.5 0 2.9.9 3.6 2.2"/><path d="M22 18h-5.9c-1.3 0-2.6-.7-3.3-1.8l-.5-.8"/><path d="m18 14 4 4-4 4"/></symbol>
+    <symbol id="i-share" viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+    <symbol id="i-cart" viewBox="0 0 24 24"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h2.2l2.5 11.6a2 2 0 0 0 2 1.6h9a2 2 0 0 0 2-1.5L21.5 7H5.3"/></symbol>
+    <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></symbol>
+    <symbol id="i-external" viewBox="0 0 24 24"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="4"/><path d="m10 9 5 3-5 3z"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20M2 12h20"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="14" height="14" rx="2"/><path d="M4 16a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+    <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></symbol>
+  </defs>
+</svg>
+
+<div id="storage-warning" class="banner banner-warn" hidden>
+  This browser is blocking storage (private browsing?), so nothing will be saved when you close it.
+</div>
+
+<main class="app">
+
+  <!-- ================= RECIPES ================= -->
+  <section id="view-recipes" class="view is-active" aria-labelledby="h-recipes">
+    <header class="view-head">
+      <div class="view-titles">
+        <p class="eyebrow" id="recipes-eyebrow">Your collection</p>
+        <h1 id="h-recipes">Recipes</h1>
+      </div>
+      <div class="head-actions">
+        <button class="icon-btn" type="button" data-open-settings aria-label="Settings"><svg class="ic"><use href="#i-settings"/></svg></button>
+        <button class="icon-btn icon-btn-primary" type="button" id="btn-new-recipe" aria-label="Add a recipe"><svg class="ic"><use href="#i-plus"/></svg></button>
+      </div>
+    </header>
+
+    <div id="recipes-tools" class="sticky-tools">
+      <label class="search">
+        <svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>
+        <input id="in-search" type="search" placeholder="Search recipes or ingredients" aria-label="Search recipes" autocomplete="off" />
+        <button class="search-clear" type="button" aria-label="Clear search" hidden><svg class="ic"><use href="#i-x"/></svg></button>
+      </label>
+      <div id="catbar" class="chips" role="toolbar" aria-label="Filter by category"></div>
+    </div>
+
+    <p id="recipes-count" class="list-caption"></p>
+    <div id="recipe-list" class="recipe-list"></div>
+
+    <div id="recipes-empty" class="empty" hidden>
+      <div class="empty-art" aria-hidden="true">🥘</div>
+      <h2>Start your recipe box</h2>
+      <p id="seed-blurb">Load the built-in collection to try the planner straight away, or add your own.</p>
+      <div class="stack">
+        <button class="btn btn-primary btn-block" type="button" id="btn-seed">Add the built-in recipes</button>
+        <button class="btn btn-block" type="button" data-new-recipe>Add my own recipe</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= PLAN ================= -->
+  <section id="view-plan" class="view" aria-labelledby="h-plan">
+    <header class="view-head">
+      <div class="view-titles">
+        <p class="eyebrow" id="plan-eyebrow">This week</p>
+        <h1 id="h-plan">Meal plan</h1>
+      </div>
+      <div class="head-actions">
+        <button class="icon-btn" type="button" data-open-settings aria-label="Settings"><svg class="ic"><use href="#i-settings"/></svg></button>
+        <button class="icon-btn" type="button" id="btn-surprise" aria-label="Pick meals at random"><svg class="ic"><use href="#i-shuffle"/></svg></button>
+      </div>
+    </header>
+
+    <div class="card portions">
+      <div class="portion">
+        <span class="portion-label"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-users"/></svg>People</span>
+        <div class="stepper" data-stepper="people">
+          <button type="button" data-step="-1" aria-label="Fewer people"><svg class="ic"><use href="#i-minus"/></svg></button>
+          <output id="out-people" aria-live="polite">2</output>
+          <button type="button" data-step="1" aria-label="More people"><svg class="ic"><use href="#i-plus"/></svg></button>
+        </div>
+      </div>
+      <div class="portion">
+        <span class="portion-label"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-box"/></svg>Leftovers</span>
+        <div class="stepper" data-stepper="extra">
+          <button type="button" data-step="-1" aria-label="Fewer spare portions"><svg class="ic"><use href="#i-minus"/></svg></button>
+          <output id="out-extra" aria-live="polite">0</output>
+          <button type="button" data-step="1" aria-label="More spare portions"><svg class="ic"><use href="#i-plus"/></svg></button>
+        </div>
+      </div>
+      <p class="portions-sum" id="portions-sum"></p>
+    </div>
+
+    <div id="plan-days"></div>
+
+    <div id="plan-empty" class="empty empty-compact" hidden>
+      <div class="empty-art" aria-hidden="true">🗓️</div>
+      <h2>Nothing planned yet</h2>
+      <p>Choose a few meals for the week and your grocery list builds itself.</p>
+      <div class="stack">
+        <button class="btn btn-primary btn-block" type="button" data-open-picker>Choose meals</button>
+        <button class="btn btn-block" type="button" data-surprise><svg class="ic ic-sm" aria-hidden="true"><use href="#i-shuffle"/></svg>Surprise me</button>
+      </div>
+    </div>
+
+    <div id="plan-norecipes" class="empty empty-compact" hidden>
+      <div class="empty-art" aria-hidden="true">📖</div>
+      <h2>Add some recipes first</h2>
+      <p>Your plan is built from the recipes in your collection.</p>
+      <button class="btn btn-primary btn-block" type="button" data-go="recipes">Go to recipes</button>
+    </div>
+
+    <button class="btn btn-dashed btn-block" type="button" id="btn-add-meals" data-open-picker hidden>
+      <svg class="ic ic-sm" aria-hidden="true"><use href="#i-plus"/></svg>Add meals
+    </button>
+
+    <button class="cta-card" type="button" id="plan-cta" data-go="list" hidden>
+      <span class="cta-icon" aria-hidden="true"><svg class="ic"><use href="#i-cart"/></svg></span>
+      <span class="cta-text">
+        <span class="cta-title">Grocery list is ready</span>
+        <span class="cta-sub" id="plan-cta-sub"></span>
+      </span>
+      <svg class="ic cta-arrow" aria-hidden="true"><use href="#i-arrow-right"/></svg>
+    </button>
+  </section>
+
+  <!-- ================= GROCERIES ================= -->
+  <section id="view-list" class="view" aria-labelledby="h-list">
+    <header class="view-head">
+      <div class="view-titles">
+        <p class="eyebrow" id="list-eyebrow">Shopping list</p>
+        <h1 id="h-list">Groceries</h1>
+      </div>
+      <div class="head-actions">
+        <button class="icon-btn" type="button" id="btn-list-more" aria-label="List options"><svg class="ic"><use href="#i-more"/></svg></button>
+        <button class="icon-btn" type="button" id="btn-share" aria-label="Share list"><svg class="ic"><use href="#i-share"/></svg></button>
+      </div>
+    </header>
+
+    <div id="list-progress" class="card progress-card" hidden>
+      <div class="progress-row">
+        <div class="ring" id="ring" style="--p:0" role="img" aria-label="Progress">
+          <span id="ring-text">0%</span>
+        </div>
+        <div class="progress-copy">
+          <p class="progress-title" id="progress-title"></p>
+          <p class="progress-sub" id="progress-sub"></p>
+        </div>
+      </div>
+      <div id="list-legend" class="legend"></div>
+    </div>
+
+    <form id="form-quick" class="quick-add" autocomplete="off">
+      <svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg>
+      <input id="in-quick" type="text" placeholder="Add an item…" aria-label="Add an item to the list" enterkeyhint="done" />
+      <select id="in-quick-aisle" aria-label="Aisle"></select>
+      <button class="btn btn-primary btn-sm" type="submit">Add</button>
+    </form>
+
+    <div id="grocery-list"></div>
+
+    <div id="list-empty" class="empty empty-compact" hidden>
+      <div class="empty-art" aria-hidden="true">🛒</div>
+      <h2>Your list is empty</h2>
+      <p>Plan some meals and every ingredient lands here, merged and sorted by aisle.</p>
+      <button class="btn btn-primary btn-block" type="button" data-go="plan">Plan meals</button>
+    </div>
+
+    <div id="list-alldone" class="done-banner" hidden>
+      <span aria-hidden="true">🎉</span> Everything's in the cart.
+      <button class="link" type="button" id="btn-newweek-inline">Start a new week</button>
+    </div>
+  </section>
+
+</main>
+
+<!-- ================= BOTTOM NAV ================= -->
+<nav class="tabbar" aria-label="Main">
+  <button class="tab is-active" type="button" data-tab="recipes" aria-current="page">
+    <svg class="ic"><use href="#i-book"/></svg><span>Recipes</span>
+  </button>
+  <button class="tab" type="button" data-tab="plan">
+    <span class="tab-icon"><svg class="ic"><use href="#i-calendar"/></svg><span class="badge" id="badge-plan" hidden></span></span><span>Plan</span>
+  </button>
+  <button class="tab" type="button" data-tab="list">
+    <span class="tab-icon"><svg class="ic"><use href="#i-cart"/></svg><span class="badge" id="badge-list" hidden></span></span><span>Groceries</span>
+  </button>
+</nav>
+
+<!-- ================= SHEETS ================= -->
+
+<!-- Recipe detail -->
+<dialog tabindex="-1" id="sheet-recipe" class="sheet" aria-labelledby="rd-title">
+  <div class="sheet-grab" aria-hidden="true"></div>
+  <div class="sheet-body" id="rd-body"></div>
+</dialog>
+
+<!-- Add / edit recipe -->
+<dialog tabindex="-1" id="sheet-edit" class="sheet sheet-tall" aria-labelledby="ed-heading">
+  <div class="sheet-grab" aria-hidden="true"></div>
+  <header class="sheet-head">
+    <button class="link" type="button" data-close>Cancel</button>
+    <h2 id="ed-heading">New recipe</h2>
+    <button class="link link-strong" type="submit" form="form-recipe" id="ed-save">Save</button>
+  </header>
+  <div class="sheet-body">
+    <div class="segmented" id="ed-mode" role="tablist" aria-label="How to add">
+      <button type="button" class="is-on" data-mode="url" role="tab" aria-selected="true"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-link"/></svg>From a link</button>
+      <button type="button" data-mode="manual" role="tab" aria-selected="false"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-edit"/></svg>Type it in</button>
+    </div>
+
+    <form id="form-url" class="stack" autocomplete="off">
+      <div class="field">
+        <label for="in-url">Recipe link</label>
+        <input id="in-url" type="url" inputmode="url" placeholder="https://www.allrecipes.com/recipe/…" />
+        <p class="hint">Works on most recipe sites. We'll pull the name, servings and ingredients for you to check.</p>
+      </div>
+      <button class="btn btn-primary btn-block" type="submit" id="btn-fetch">Get the recipe</button>
+      <div id="url-status" class="banner" hidden></div>
+    </form>
+
+    <form id="form-recipe" class="stack" autocomplete="off" hidden>
+      <div id="ed-note" class="banner banner-ok" hidden></div>
+      <div class="field">
+        <label for="ed-title">Name</label>
+        <input id="ed-title" type="text" placeholder="Garlic butter chicken" required />
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="ed-category">Category</label>
+          <select id="ed-category"></select>
+        </div>
+        <div class="field field-narrow">
+          <label for="ed-servings">Serves</label>
+          <input id="ed-servings" type="number" min="1" max="100" step="1" value="4" inputmode="numeric" required />
+        </div>
+      </div>
+      <div class="field">
+        <label for="ed-description">Description <span class="opt">optional</span></label>
+        <input id="ed-description" type="text" placeholder="One line about this meal" />
+      </div>
+      <div class="field">
+        <label for="ed-main">Ingredients <span class="opt">one per line</span></label>
+        <textarea id="ed-main" rows="8" placeholder="1 lb ground beef&#10;2 cloves garlic, minced&#10;1 yellow onion, diced" required></textarea>
+      </div>
+      <div class="field">
+        <label for="ed-seasonings">Seasonings &amp; sauces <span class="opt">optional, one per line</span></label>
+        <textarea id="ed-seasonings" rows="4" placeholder="1 tsp kosher salt&#10;3 tbsp soy sauce"></textarea>
+        <label class="toggle-row" id="ed-autosort-row">
+          <span>Move salt, spices and sauces here automatically</span>
+          <input id="ed-autosort" type="checkbox" class="switch" checked />
+        </label>
+      </div>
+      <div class="field">
+        <label for="ed-url">Link to the original <span class="opt">optional</span></label>
+        <input id="ed-url" type="url" inputmode="url" placeholder="https://…" />
+      </div>
+      <button class="btn btn-danger-ghost btn-block" type="button" id="ed-delete" hidden>
+        <svg class="ic ic-sm" aria-hidden="true"><use href="#i-trash"/></svg>Delete recipe
+      </button>
+    </form>
+  </div>
+</dialog>
+
+<!-- Meal picker -->
+<dialog tabindex="-1" id="sheet-picker" class="sheet sheet-tall" aria-labelledby="pk-heading">
+  <div class="sheet-grab" aria-hidden="true"></div>
+  <header class="sheet-head">
+    <span></span>
+    <h2 id="pk-heading">Choose meals</h2>
+    <span></span>
+  </header>
+  <div class="sheet-body sheet-body-flush">
+    <div class="picker-tools">
+      <label class="search">
+        <svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>
+        <input id="pk-search" type="search" placeholder="Search recipes" aria-label="Search recipes" autocomplete="off" />
+      </label>
+      <div id="pk-catbar" class="chips" role="toolbar" aria-label="Filter by category"></div>
+    </div>
+    <div id="pk-list" class="pick-list"></div>
+  </div>
+  <footer class="sheet-foot">
+    <span id="pk-count" class="pk-count"></span>
+    <button class="btn btn-primary" type="button" data-close>Done</button>
+  </footer>
+</dialog>
+
+<!-- Surprise me -->
+<dialog tabindex="-1" id="sheet-surprise" class="sheet" aria-labelledby="sp-heading">
+  <div class="sheet-grab" aria-hidden="true"></div>
+  <div class="sheet-body stack">
+    <div class="sheet-hero">
+      <div class="hero-icon" aria-hidden="true"><svg class="ic"><use href="#i-shuffle"/></svg></div>
+      <h2 id="sp-heading">Surprise me</h2>
+      <p class="muted">We'll pick meals at random. This replaces the current plan.</p>
+    </div>
+    <div class="setting-row">
+      <span>How many meals</span>
+      <div class="stepper" data-stepper="random">
+        <button type="button" data-step="-1" aria-label="Fewer meals"><svg class="ic"><use href="#i-minus"/></svg></button>
+        <output id="out-random">5</output>
+        <button type="button" data-step="1" aria-label="More meals"><svg class="ic"><use href="#i-plus"/></svg></button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="sp-from">Pick from</label>
+      <select id="sp-from"></select>
+    </div>
+    <button class="btn btn-primary btn-block" type="button" id="btn-do-surprise">Pick my meals</button>
+    <button class="btn btn-ghost btn-block" type="button" data-close>Cancel</button>
+  </div>
+</dialog>
+
+<!-- Grocery list options -->
+<dialog tabindex="-1" id="sheet-listmore" class="sheet" aria-label="List options">
+  <div class="sheet-grab" aria-hidden="true"></div>
+  <div class="sheet-body">
+    <div class="menu">
+      <label class="menu-item">
+        <svg class="ic" aria-hidden="true"><use href="#i-eye"/></svg>
+        <span class="menu-text">Hide items in the cart</span>
+        <input type="checkbox" class="switch" id="opt-hide-done" />
+      </label>
+      <label class="menu-item" id="row-wake">
+        <svg class="ic" aria-hidden="true"><use href="#i-sun"/></svg>
+        <span class="menu-text">Keep screen on while shopping</span>
+        <input type="checkbox" class="switch" id="opt-wake" />
+      </label>
+    </div>
+    <div class="menu">
+      <button class="menu-item" type="button" id="btn-copy"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg><span class="menu-text">Copy list as text</span></button>
+      <button class="menu-item" type="button" id="btn-uncheck"><svg class="ic" aria-hidden="true"><use href="#i-undo"/></svg><span class="menu-text">Untick everything</span></button>
+    </div>
+    <div class="menu">
+      <button class="menu-item menu-danger" type="button" id="btn-reset"><svg class="ic" aria-hidden="true"><use href="#i-calendar"/></svg><span class="menu-text">Start a new week</span></button>
+    </div>
+    <p class="hint center">Ticks save instantly, so you can lock your phone mid-shop.</p>
+  </div>
+</dialog>
+
+<!-- Settings -->
+<dialog tabindex="-1" id="sheet-settings" class="sheet" aria-labelledby="st-heading">
+  <div class="sheet-grab" aria-hidden="true"></div>
+  <header class="sheet-head">
+    <span></span>
+    <h2 id="st-heading">Settings</h2>
+    <button class="link link-strong" type="button" data-close>Done</button>
+  </header>
+  <div class="sheet-body">
+    <p class="menu-label">Appearance</p>
+    <div class="segmented" id="theme-pick" role="radiogroup" aria-label="Theme">
+      <button type="button" data-theme-val="system" role="radio">Auto</button>
+      <button type="button" data-theme-val="light" role="radio">Light</button>
+      <button type="button" data-theme-val="dark" role="radio">Dark</button>
+    </div>
+
+    <div id="seed-more">
+      <p class="menu-label">Recipes</p>
+      <div class="menu">
+        <button class="menu-item" type="button" id="btn-seed-more"><svg class="ic" aria-hidden="true"><use href="#i-book"/></svg><span class="menu-text">Add missing built-in recipes<small id="seed-more-text"></small></span></button>
+      </div>
+    </div>
+
+    <p class="menu-label">Backup</p>
+    <div class="menu">
+      <button class="menu-item" type="button" id="btn-export"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg><span class="menu-text">Save a backup file<small>Keep it safe or move to a new phone</small></span></button>
+      <button class="menu-item" type="button" id="btn-import"><svg class="ic" aria-hidden="true"><use href="#i-upload"/></svg><span class="menu-text">Restore from backup</span></button>
+    </div>
+    <input id="file-import" type="file" accept="application/json,.json" hidden />
+    <div id="backup-status" class="banner" hidden></div>
+
+    <div class="menu">
+      <button class="menu-item menu-danger" type="button" id="btn-wipe"><svg class="ic" aria-hidden="true"><use href="#i-trash"/></svg><span class="menu-text">Delete everything on this device</span></button>
+    </div>
+
+    <p class="hint center" id="app-version">Meals · version 4.0<br />Everything is stored on this device only.</p>
+  </div>
+</dialog>
+
+<!-- Confirm -->
+<dialog id="confirm" class="alert" aria-labelledby="confirm-title">
+  <h2 id="confirm-title"></h2>
+  <p id="confirm-text"></p>
+  <div class="alert-actions">
+    <button class="btn" type="button" id="confirm-no">Cancel</button>
+    <button class="btn btn-danger" type="button" id="confirm-yes">Delete</button>
+  </div>
+</dialog>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden>
+  <span id="toast-text"></span>
+  <button type="button" class="toast-action" id="toast-action" hidden>Undo</button>
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
