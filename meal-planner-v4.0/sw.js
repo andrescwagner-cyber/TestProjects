@@ -1,28 +1,40 @@
 /**
  * sw.js — service worker.
  *
- * Purpose: the app keeps working in the shop when the signal drops. The app
- * shell is cached on install; afterwards every file is served from cache
- * immediately and refreshed in the background (stale-while-revalidate), so
- * opening the app is instant and a redeploy is picked up on the next launch.
+ * Purpose: the app keeps working in the shop when the signal drops.
+ *
+ * Strategy: network first, cache as the fallback. With a connection, every
+ * file comes fresh from the server (and the copy in the cache is refreshed),
+ * so a redeploy is picked up on the very next launch and old and new files
+ * can never be mixed. If the network fails, or takes longer than a few
+ * seconds (one bar of signal in a supermarket), the cached copy is served
+ * instead.
+ *
+ * 3.0 and 4.0 used stale-while-revalidate, which served the previous launch's
+ * files first. After an update that could pair a new page with old scripts
+ * and leave buttons dead until the app was relaunched twice.
  *
  * The recipe importer (/api/*) is never cached — it needs the network by
  * definition, and a cached failure would be worse than none.
  *
- * Bump CACHE_VERSION when you change any shell file.
+ * When you change any file, bump the version everywhere it appears: the
+ * ?v= on the <link> and <script> in index.html, the ?v= on every import
+ * line in js/, the SHELL list below, and CACHE_VERSION. Versioned URLs mean
+ * a phone can never run a new page against an old cached script.
  */
 
-const CACHE_VERSION = 'meal-planner-4.0';
+const CACHE_VERSION = 'meal-planner-4.1';
+const NETWORK_TIMEOUT_MS = 3500;
 
 const SHELL = [
-  '.',
+  './',
   'index.html',
-  'css/styles.css',
-  'js/app.js',
-  'js/store.js',
-  'js/grocery.js',
-  'js/data.js',
-  'js/recipes.js',
+  'css/styles.css?v=4.1',
+  'js/app.js?v=4.1',
+  'js/store.js?v=4.1',
+  'js/grocery.js?v=4.1',
+  'js/data.js?v=4.1',
+  'js/recipes.js?v=4.1',
   'manifest.webmanifest',
   'icons/icon-192.png',
   'icons/icon-512.png',
@@ -58,6 +70,23 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+/** fetch() that gives up after `ms`, so a weak signal falls back to the cache quickly. */
+function fetchWithTimeout(request, ms) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('timeout')), ms);
+    fetch(request).then(
+      (response) => {
+        clearTimeout(timer);
+        resolve(response);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
@@ -70,35 +99,25 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     (async () => {
       const cache = await caches.open(CACHE_VERSION);
-      const cached = await cache.match(request, { ignoreSearch: true });
-
-      const network = fetch(request)
-        .then((response) => {
-          if (response && response.ok && response.type !== 'opaque') {
-            cache.put(request, response.clone()).catch(() => undefined);
-          }
-          return response;
-        })
-        .catch(() => undefined);
-
-      if (cached) {
-        // Serve instantly, refresh in the background.
-        event.waitUntil(network);
-        return cached;
+      try {
+        const fresh = await fetchWithTimeout(request, NETWORK_TIMEOUT_MS);
+        if (fresh && fresh.ok && fresh.type !== 'opaque') {
+          event.waitUntil(cache.put(request, fresh.clone()).catch(() => undefined));
+        }
+        return fresh;
+      } catch (err) {
+        const cached = await cache.match(request);
+        if (cached) return cached;
+        // Navigations: any cached copy of the page will do.
+        if (request.mode === 'navigate') {
+          const shell = (await cache.match('index.html')) || (await cache.match('./'));
+          if (shell) return shell;
+        }
+        return new Response('Offline and this file is not cached yet.', {
+          status: 503,
+          headers: { 'Content-Type': 'text/plain' },
+        });
       }
-
-      const fresh = await network;
-      if (fresh) return fresh;
-
-      // Offline and never cached: fall back to the app shell for navigations.
-      if (request.mode === 'navigate') {
-        const shell = await cache.match('index.html');
-        if (shell) return shell;
-      }
-      return new Response('Offline and this file is not cached yet.', {
-        status: 503,
-        headers: { 'Content-Type': 'text/plain' },
-      });
     })(),
   );
 });

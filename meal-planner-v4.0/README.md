@@ -1,4 +1,7 @@
-# Meal Planner 4.0 — put it on your phone
+# Meal Planner 4.1 — put it on your phone
+
+**Version 4.1** — fixes Settings on iPhone, adds a proper "Start a new
+week", and makes updates reliable (see *What changed in 4.1* below).
 
 **Version 4.0** — a full redesign: bottom tab bar, recipe cards, slide-up
 recipe sheets, favorites, meals scheduled by day, quick-add with automatic
@@ -175,8 +178,22 @@ The Grocery tab merges everything into one list:
   app halfway down the frozen aisle — everything is exactly where you left it.
 - **Add something that isn't in a recipe** for paper towels, coffee and so on.
   You can type a quantity: `2 rolls paper towels` is understood.
-- **Start a new week** clears the plan, your extras and every tick. Your saved
-  recipes are kept.
+- **Start a new week** — see the next section.
+
+### Starting a new week
+
+When you're back from the shop, tap **Done shopping? Start a new week** at the
+bottom of the Plan tab. It's also in **Settings → This week**, in the **⋯**
+menu on the Groceries tab, and on the "Everything's in the cart" banner.
+
+Every tick is cleared. Two switches decide the rest:
+
+- **Clear this week's meals** — turn off to cook the same meals again.
+- **Clear items I added** — turn off to keep staples (milk, eggs, coffee) on
+  next week's list.
+
+Recipes, favorites and the people/leftovers numbers are never touched, and an
+**Undo** button appears for a few seconds in case you tap it by mistake.
 
 ---
 
@@ -253,6 +270,23 @@ a copy of itself on your phone so it works offline, and it swaps in the new
 version on the next launch.
 
 ---
+
+## What changed in 4.1
+
+- **Settings works everywhere.** The gear is on every tab (it was missing from
+  Groceries) and is now a real gear icon.
+- **Updates can't half-apply.** The offline copy is now used only when there's
+  no signal; with a connection the app always loads fresh files. Every script
+  link carries a version number, so a phone can never mix a new page with an
+  old script — the cause of buttons that did nothing after an update.
+- **Backups work on iPhone.** "Save a backup" opens the share sheet (Save to
+  Files, Mail, AirDrop) instead of a download that trapped home-screen apps.
+- **Undo is always tappable**, even with a panel open.
+- **Start a new week** has its own panel with the choices above.
+- The page no longer scrolls behind an open panel on iPhone.
+
+When you change any file, bump the `?v=` number everywhere it appears (see
+the comment at the top of `sw.js`).
 
 ## For the curious: what's inside
 
